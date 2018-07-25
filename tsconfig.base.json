@@ -1,0 +1,37 @@
+{
+	"compilerOptions": {
+		"sourceRoot": "./modules",
+		"outDir": "dist/",
+		"declarationDir": "./dist/types",
+		"module": "commonjs",
+		"target": "es5",
+		"lib": [
+			"es5"
+		],
+		"sourceMap": true,
+		"allowJs": false,
+		"noLib": false,
+		"moduleResolution": "node",
+		"allowSyntheticDefaultImports": false,
+		"allowUnreachableCode": false,
+		"allowUnusedLabels": false,
+		"declaration": true,
+		"noImplicitReturns": true,
+		"noImplicitThis": true,
+		"noImplicitAny": true,
+		"removeComments": true,
+		"strictNullChecks": true,
+		"noUnusedLocals": true,
+		"suppressImplicitAnyIndexErrors": true,
+		"forceConsistentCasingInFileNames": true,
+		"noFallthroughCasesInSwitch": true,
+		"noEmitOnError": true,
+		"pretty": true,
+		"strict": false
+	},
+	"exclude": [
+		"./node_modules",
+		"./dist",
+		"./coverage"
+	]
+}

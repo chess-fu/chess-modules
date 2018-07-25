@@ -1,0 +1,11 @@
+.nyc_output/
+coverage/
+node_modules/
+modules/
+dist/**/*.test.*
+dist/**/*.map
+tsconfig.*
+.gitignore
+node_modules
+*.log
+*.tgz

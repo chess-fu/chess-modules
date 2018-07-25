@@ -1,0 +1,11 @@
+{
+  "compress": {
+    "warnings": false,
+    "comparisons": false
+  },
+  "output": {
+    "comments": false,
+    "ascii_only": true,
+    "max_line_len": 160
+  }
+}

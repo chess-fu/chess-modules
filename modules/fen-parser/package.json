@@ -1,0 +1,23 @@
+{
+	"name": "@chess-fu/fen-parser",
+	"version": "0.0.1",
+	"description": "Chess FEN parser for 8x8 games, including chess 960",
+	"author": "roger@chess-fu.com",
+	"license": "MIT",
+	"homepage": "https://chess-fu.com",
+	"bugs": {
+		"url": "https://github.com/chess-fu/chess-modules"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git@github.com:chess-fu/chess-modules.git"
+	},
+	"keywords": ["chess-fu", "chess", "fen", "parser", "960"],
+	"main": "dist/fen-parser.js",
+	"scripts": {
+		"prebuild": "../../node_modules/.bin/rimraf ./dist",
+		"build": "../../node_modules/.bin/tsc",
+		"postbuild": "../../node_modules/.bin/uglifyjs --config-file ../../uglify-js.json -o ./dist/fen-parser.min.js  ./dist/src/*.js",
+		"release": "npm publish -tag latest --access public"
+	}
+}

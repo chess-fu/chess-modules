@@ -1,0 +1,67 @@
+{
+	"name": "@chess-fu/modules",
+	"version": "0.0.1",
+	"description": "Chess modules",
+	"author": "roger@chess-fu.com",
+	"license": "MIT",
+	"homepage": "https://chess-fu.com",
+	"bugs": {
+		"url": "https://github.com/chess-fu/chess-modules"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git@github.com:chess-fu/chess-modules.git"
+	},
+	"keywords": [
+		"chess-fu",
+		"chess"
+	],
+	"main": "none.js",
+	"scripts": {
+		"clean": "rimraf ./dist ./coverage ./lib",
+		"test": "run-s clean test:*",
+		"test:lint": "tslint -t codeFrame -p tsconfig.json",
+		"test:mocha": "./node_modules/.bin/mocha ./modules/**/*.test.ts",
+		"test:cov": "./node_modules/.bin/nyc ./node_modules/.bin/mocha ./modules/**/*.test.ts",
+		"build": "run-s build:*",
+		"build:tsc": "tsc -p tsconfig.json",
+		"make:fen-parser": "cd modules/fen-parser && npm run build",
+		"prerelease": "npm version patch && npm run build",
+		"release": "npm publish -tag latest --access public",
+		"postrelease": "git push"
+	},
+	"dependencies": {},
+	"devDependencies": {
+		"@types/chai": "^4.1.4",
+		"@types/mocha": "^5.2.5",
+		"@types/node": "^10.5.3",
+		"chai": "^4.1.2",
+		"mocha": "^5.2.0",
+		"npm-run-all": "^4.1.3",
+		"nyc": "^12.0.2",
+		"rimraf": "^2.6.2",
+		"ts-node": "^7.0.0",
+		"tslint": "^5.11.0",
+		"typescript": "^2.9.2",
+		"uglify-js": "^3.4.5"
+	},
+	"nyc": {
+		"check-coverage": false,
+		"per-file": false,
+		"extension": [
+			".ts"
+		],
+		"include": [
+			"modules/**/*.ts"
+		],
+		"reporter": [
+			"text-summary",
+			"lcov"
+		],
+		"sourceMap": true,
+		"instrument": true,
+		"cache": true,
+		"all": true,
+		"report-dir": "./coverage"
+	}
+}
