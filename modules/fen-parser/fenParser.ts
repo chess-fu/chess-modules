@@ -1,6 +1,5 @@
-
-const matchFullFEN =
-  /^\s*([prnbqkPRNBQK12345678]{1,8}(?:\/[prnbqkPRNBQK12345678]{1,8}){7})\s+(w|b)\s+([KQkqA-Ha-h]{1,4}|\-)\s+([a-h][36]|\-)\s+(\d{1,3})\s+(\d{1,4})\s*$/;
+// tslint:disable-next-line:max-line-length
+const matchFullFEN = /^\s*([prnbqkPRNBQK12345678]{1,8}(?:\/[prnbqkPRNBQK12345678]{1,8}){7})\s+(w|b)\s+([KQkqA-Ha-h]{1,4}|\-)\s+(?:(?:([a-h][36]|\-)\s+(\d{1,3})\s+(\d{1,4}))|(?:0\s+0))\s*$/;
 
 const fenExpand = /[1-8]+/g;
 const fenPack = /\-+/g;
@@ -29,9 +28,9 @@ export class FenParser {
       this.ranks = match[1].split('/').map(s => s.replace(fenExpand, i => fenSubst[i]));
       this.turn = match[2];
       this.castles = match[3];
-      this.enpass = match[4];
-      this.halfmoveClock = parseInt(match[5], 10);
-      this.moveNumber = parseInt(match[6], 10);
+      this.enpass = match[4] !== undefined ? match[4] : '-';
+      this.halfmoveClock = match[5] !== undefined ? parseInt(match[5], 10) : 0;
+      this.moveNumber = match[6] !== undefined ? parseInt(match[6], 10) : 1;
 
       this.isValid = this.ranks.reduce((before, rank) => before && rank.length === 8, true);
     }

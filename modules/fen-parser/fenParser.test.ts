@@ -100,6 +100,20 @@ describe('FenParser', function () {
     assert.equal(Object.keys(fen.counts()).length, 0, 'Has no pieces');
   });
 
+  it('parses a Chess960 FEN', function () {
+    const fen = new FenParser('nqnbrkbr/pppppppp/8/8/8/8/PPPPPPPP/NQNBRKBR w HEhe - 0 0');
+    assert.isTrue(fen.isValid, 'Valid 960 FEN was invalid.');
+    assert.equal(fen.castles, 'HEhe');
+  });
+
+  it('parses a FEN when missing enpass and turn 0', function () {
+    const fen = new FenParser('nqnbrkbr/pppppppp/8/8/8/8/PPPPPPPP/NQNBRKBR w KQkq 0 0');
+    assert.isTrue(fen.isValid, 'enpass can be missing if turn 0.');
+    assert.equal(fen.castles, 'KQkq');
+    assert.equal(fen.enpass, '-');
+    assert.equal(fen.halfmoveClock, 0);
+    assert.equal(fen.moveNumber, 1);
+  });
 
   describe('parsing', function () {
     //#region Test FEN values
