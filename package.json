@@ -1,8 +1,9 @@
 {
 	"name": "@chess-fu/modules",
+	"access": "restricted",
 	"version": "0.0.1",
 	"description": "Chess modules",
-	"author": "roger@chess-fu.com",
+	"author": "chess-fu.com",
 	"license": "MIT",
 	"homepage": "https://chess-fu.com",
 	"bugs": {

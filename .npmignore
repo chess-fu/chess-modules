@@ -2,8 +2,7 @@
 coverage/
 node_modules/
 modules/
-dist/**/*.test.*
-dist/**/*.map
+**/dist/**
 tsconfig.*
 .gitignore
 node_modules
