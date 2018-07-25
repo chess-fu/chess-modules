@@ -1,7 +1,7 @@
 {
 	"name": "@chess-fu/fen-parser",
 	"access": "public",
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"description": "Chess FEN parser for 8x8 games, including chess 960",
 	"author": "chess-fu.com",
 	"license": "MIT",
@@ -13,7 +13,13 @@
 		"type": "git",
 		"url": "git@github.com:chess-fu/chess-modules.git"
 	},
-	"keywords": ["chess-fu", "chess", "fen", "parser", "960"],
+	"keywords": [
+		"chess-fu",
+		"chess",
+		"fen",
+		"parser",
+		"960"
+	],
 	"main": "dist/fen-parser.min.js",
 	"types": "dist/types/fenParser.d.ts",
 	"files": [
