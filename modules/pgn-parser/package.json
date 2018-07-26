@@ -1,0 +1,38 @@
+{
+	"name": "@chess-fu/pgn-parser",
+	"access": "public",
+	"version": "0.1.0",
+	"description": "Chess PGN parser for 8x8 chess games, including chess 960",
+	"author": "chess-fu.com",
+	"license": "MIT",
+	"homepage": "https://chess-fu.com",
+	"bugs": {
+		"url": "https://github.com/chess-fu/chess-modules"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git@github.com:chess-fu/chess-modules.git"
+	},
+	"keywords": [
+		"chess-fu",
+		"chess",
+		"pgn",
+		"parser",
+		"960"
+	],
+	"main": "dist/pgn-parser.min.js",
+	"types": "dist/types/pgnParser.d.ts",
+	"files": [
+		"readme.md",
+		"dist/pgn-parser.min.js",
+		"dist/types/pgnParser.d.ts"
+	],
+	"scripts": {
+		"prebuild": "../../node_modules/.bin/rimraf ./dist",
+		"build": "../../node_modules/.bin/tsc",
+		"test": "cd ../../ && ./node_modules/.bin/mocha ./modules/pgn-parser/*.test.ts",
+		"postbuild": "../../node_modules/.bin/uglifyjs --config-file ../../uglify-js.json -o ./dist/pgn-parser.min.js  ./dist/src/*.js",
+		"prepack": "npm run build",
+		"release": "npm publish -tag latest --access public"
+	}
+}
