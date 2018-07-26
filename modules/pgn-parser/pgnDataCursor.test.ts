@@ -1,6 +1,7 @@
 import 'mocha';
 import { assert } from 'chai';
-import { PgnDataCursor, PgnTokenType, TagPair } from './pgnDataCursor';
+import { PgnDataCursor, PgnTokenType } from './pgnDataCursor';
+import { HeaderEntry } from './pgnGame';
 
 describe('PgnDataCursor', function () {
 
@@ -11,7 +12,7 @@ describe('PgnDataCursor', function () {
 
   it('parses simple tag pair', function () {
     const cursor = new PgnDataCursor('[Header "Value"]');
-    const result = cursor.readTagPair() as TagPair;
+    const result = cursor.readTagPair() as HeaderEntry;
     assert.isNotNull(result);
     assert.equal(result.name, 'Header');
     assert.equal(result.value, 'Value');
@@ -19,7 +20,7 @@ describe('PgnDataCursor', function () {
 
   it('parses tag pair no-space', function () {
     const cursor = new PgnDataCursor('[Header"Value"]');
-    const result = cursor.readTagPair() as TagPair;
+    const result = cursor.readTagPair() as HeaderEntry;
     assert.isNotNull(result);
     assert.equal(result.name, 'Header');
     assert.equal(result.value, 'Value');
@@ -27,7 +28,7 @@ describe('PgnDataCursor', function () {
 
   it('parses tag pair extra-space', function () {
     const cursor = new PgnDataCursor('[  Header  \t\v  "Value" ] ');
-    const result = cursor.readTagPair() as TagPair;
+    const result = cursor.readTagPair() as HeaderEntry;
     assert.isNotNull(result);
     assert.equal(result.name, 'Header');
     assert.equal(result.value, 'Value');
@@ -40,7 +41,7 @@ describe('PgnDataCursor', function () {
 
   it('tag pair on a new line', function () {
     const cursor = new PgnDataCursor('[Header\n"Value"]');
-    const result = cursor.readTagPair() as TagPair;
+    const result = cursor.readTagPair() as HeaderEntry;
     assert.isNotNull(result);
     assert.equal(result.name, 'Header');
     assert.equal(result.value, 'Value');
@@ -52,7 +53,7 @@ describe('PgnDataCursor', function () {
 {here is the "name" =}Header{odd; I know}
 <This is for expansion??? someday .... maybe.>"Value"
 ]`);
-    const result = cursor.readTagPair() as TagPair;
+    const result = cursor.readTagPair() as HeaderEntry;
     assert.isNotNull(result);
     assert.equal(result.name, 'Header');
     assert.equal(result.value, 'Value');

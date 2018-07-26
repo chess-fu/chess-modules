@@ -373,6 +373,9 @@ export class PgnDataCursor {
       if (move) {
         move.raw = this.readFromPrevious(startPos);
         move.san = move.piece === 'P' ? '' : move.piece;
+        if (move.piece === 'K' && move.to && move.to[0] === 'O') {
+          move.san = '';
+        }
         move.san += move.from || '';
         move.san += move.capture ? 'x' : '';
         move.san += move.to || '';
@@ -418,14 +421,14 @@ export class PgnDataCursor {
     }
 
     // allow LAN (e2-e4), allow captures: Nxe4, NXe4, N:e4
-    if (next === '-' || next === ':' || next === 'x' || next === 'X' || (next >= 'a' && next <= 'h')) {
+    if (next === '-' || next === ':' || next === 'x' || (next >= 'a' && next <= 'h')) {
       // ## Either LAN or capture notation
       if (move.to) {
         move.from = move.to;
       }
       delete move.to;
-      if (next === '-' || next === ':' || next === 'x' || next === 'X') {
-        move.capture = (next === ':' || next === 'x' || next === 'X');
+      if (next === '-' || next === ':' || next === 'x') {
+        move.capture = (next === ':' || next === 'x');
         this.read();
         next = this.peek();
       }
@@ -469,7 +472,7 @@ export class PgnDataCursor {
       '+/=', '=/+', '+/−', '−/+', '+−', '−+', '=',
       '=/\u221E', '\u221E'/*infinity*/,
     ];
-    const checkOrMate: string[] = ['#', '++', '+', '\u2021', 'x', 'X', '×'];
+    const checkOrMate: string[] = ['#', '++', '+'];
 
     const find = (arr: string[], test: (item: string) => any) => {
       for (const item of arr) {

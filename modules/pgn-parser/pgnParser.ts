@@ -157,7 +157,7 @@ export class PgnParser {
       else if (token === PgnTokenType.FullStop) {
         if (cursor.peekExact('...')) {
           cursor.readAll('.', 3);
-          move.to = '...';
+          move.raw = move.to = '...';
           break;
         }
       }

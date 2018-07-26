@@ -1,8 +1,11 @@
 import 'mocha';
 import { assert } from 'chai';
 import { PgnParser } from './pgnParser';
+import { PgnDataCursor } from './pgnDataCursor';
+import { movesToString } from './pgnDataCursor-moves.test';
+import { MoveHistory } from './pgnGame';
 
-describe('PgnDataCursor', function () {
+describe('PgnParser', function () {
 
   it('will construct', function () {
     assert.isNotNull(new PgnParser());
@@ -160,6 +163,55 @@ describe('PgnDataCursor', function () {
     const nested = (ravs[0].rav || []).filter(m => m.rav);
     assert.equal(nested.length, 1);
     assert.equal((nested[0].rav || []).length, 67);
+  });
+
+  it('parses a move with comments', function () {
+    const cursor = new PgnDataCursor('Qd8 {My comment!}');
+    const parser = new PgnParser();
+    const move = parser.parseMove(cursor);
+    assert.deepEqual(move, {
+      piece: 'Q',
+      to: 'd8',
+      raw: 'Qd8',
+      san: 'Qd8',
+      comments: ['My comment!']
+    });
+  });
+
+  it('parses a move of ...', function () {
+    const cursor = new PgnDataCursor('...');
+    const parser = new PgnParser();
+    const move = parser.parseMove(cursor);
+    assert.deepEqual(move, { raw: '...', to: '...' });
+  });
+
+  it('parses numbered moves', function () {
+    const parser = new PgnParser();
+    const movePossibles = [
+      ['', '5 ', '1.', '154.', '154.', '22...'], //move number
+      ['', 'e', 'P4', 'e4', 'e4'], // source square
+      ['d', 'd5'], // target square
+    ];
+
+    const all = movesToString(movePossibles);
+    const results = all.map(test => {
+      const cursor = new PgnDataCursor(test);
+      try {
+        const move = { test, ...parser.parseMove(cursor) as (MoveHistory & { test: string }) };
+        return move;
+      }
+      catch (ex) {
+        console.log(`${test}: ${ex.message}`);
+        throw ex;
+      }
+    });
+
+    // The move number is excluded, thus...
+    const fail = results.filter(m => m.test.indexOf(m.raw || '~not~found~') < 0);
+    if (fail.length) {
+      console.log(fail.map(m => m.test));
+      assert.fail('One or more tests failed.');
+    }
   });
 
 });
