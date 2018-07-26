@@ -1,12 +1,7 @@
-import { HeaderEntry, MoveHistory } from './pgnParser';
+import { HeaderEntry, MoveHistory } from './pgnTypes';
 
 const EOF: string = '';
 const NEWLINE = '\n';
-
-export interface TagPair {
-  name: string;
-  value: string;
-}
 
 export enum PgnTokenType {
   EndOfFile = '',
@@ -184,45 +179,6 @@ export class PgnDataCursor {
     NotExpansionEnd: () => {
       return this.peekToken() !== PgnTokenType.ExpansionEnd;
     }
-    /* IsMoveText: () => {
-      const char = this.peek();
-      switch (char) {
-        case 'a':
-        case 'b':
-        case 'c':
-        case 'd':
-        case 'e':
-        case 'f':
-        case 'g':
-        case 'h':
-        case '1':
-        case '2':
-        case '3':
-        case '4':
-        case '5':
-        case '6':
-        case '7':
-        case '8':
-        case 'x':
-        case 'P':
-        case 'R':
-        case 'N':
-        case 'B':
-        case 'Q':
-        case 'K':
-        case 'O':
-        case '+':
-        case '#':
-        case '!':
-        case '?':
-        case '-':
-        case '=':
-        case '$':
-          return true;
-        default:
-          return false;
-      }
-    } */
   };
 
   readSymbol(simple: boolean = false) {
@@ -433,7 +389,7 @@ export class PgnDataCursor {
 
     let next = this.peek();
 
-    // 1. Get the piece moved...
+    // ## Get the piece moved...
     if (next === 'O') { // Starts with an 'O' castle...?
       move.piece = 'K';
     }
@@ -445,7 +401,7 @@ export class PgnDataCursor {
       move.piece = 'P';
     }
 
-    // 3. maybe find simple answer, i.e. Ka1
+    // ## maybe find simple answer, i.e. Ka1
     if (next >= 'a' && next <= 'h') {
       move.to = this.read();
       next = this.peek();
@@ -455,15 +411,19 @@ export class PgnDataCursor {
       next = this.peek();
     }
 
-    if (next === '-' || next === 'x' || (next >= 'a' && next <= 'h')) {
-      // 4. Either LAN or capture notation
-      move.from = move.to;
+    // allow LAN (e2-e4), allow captures: Nxe4, NXe4, N:e4
+    if (next === '-' || next === ':' || next === 'x' || next === 'X' || (next >= 'a' && next <= 'h')) {
+      // ## Either LAN or capture notation
+      if (move.to) {
+        move.from = move.to;
+      }
       delete move.to;
-      if (next === '-' || next === 'x') {
-        move.capture = this.read() === 'x';
+      if (next === '-' || next === ':' || next === 'x' || next === 'X') {
+        move.capture = (next === ':' || next === 'x' || next === 'X');
+        this.read();
         next = this.peek();
       }
-      // 4.1 The attacked/target square
+      // ## The attacked/target square
       if (next >= 'a' && next <= 'h') {
         move.to = this.read();
         next = this.peek();
@@ -474,7 +434,7 @@ export class PgnDataCursor {
       }
     }
 
-    // 5. If no target square yet, see if it's a castle
+    // ## If no target square yet, see if it's a castle
     if (!move.to && next === 'O') {
       const castle = this.peekExact('O-O-O') || this.peekExact('O-O');
       if (castle) {
@@ -484,7 +444,7 @@ export class PgnDataCursor {
       }
     }
 
-    // 6. Promotion of pawn
+    // ## Promotion of pawn
     if (next === '=') {
       if (move.piece !== 'P') {
         this.throwError(`Invalid promotion from piece ${move.piece}`);
@@ -497,9 +457,13 @@ export class PgnDataCursor {
       }
     }
 
-    // 7. Take !! ?? $1 # or + in any order...
-    const annotations: string[] = ['!!', '!?', '?!', '??', '!', '?'];
-    const checkOrMate: string[] = ['#', '++', '+'];
+    // ## Take !! ?? $1 # or + in any order...
+    const annotations: string[] = [
+      '!!', '!?', '?!', '??', '!', '?',
+      '+/=', '=/+', '+/−', '−/+', '+−', '−+', '=',
+      '=/\u221E', '\u221E'/*infinity*/,
+    ];
+    const checkOrMate: string[] = ['#', '++', '+', '\u2021', 'x', 'X', '×'];
 
     const find = (arr: string[], test: (item: string) => any) => {
       for (const item of arr) {
@@ -508,19 +472,11 @@ export class PgnDataCursor {
       return undefined;
     };
 
+    // ## Now find annotations, + or #, ! ? good/bad, or nag $##
     let found: string | undefined = undefined;
     let last = -1;
     while (last !== this.position()) {
       last = this.position();
-      // check + or mate #
-      found = find(checkOrMate, m => this.peekExact(m));
-      if (found) {
-        this.seek(found.length);
-        if (move.check) {
-          this.throwError(`Found multiple check flags "${move.check} and ${found}`);
-        }
-        move.check = found;
-      }
       // !! good move ??
       found = find(annotations, m => this.peekExact(m));
       if (found) {
@@ -530,6 +486,20 @@ export class PgnDataCursor {
         }
         move.annotations = found;
       }
+      // check + or mate #
+      found = find(checkOrMate, m => this.peekExact(m));
+      if (found) {
+        this.seek(found.length);
+        if (move.check) {
+          this.throwError(`Found multiple check flags "${move.check} and ${found}`);
+        }
+        move.check = found;
+      }
+      // wierd suffix that denotes capture by en passant
+      if (this.peekExact('e.p.')) {
+        this.seek(4);
+      }
+      // NAG $0 thru $255
       if (this.peek() === '$') {
         this.read();
         const nagNum = this.readNumber();
@@ -543,12 +513,33 @@ export class PgnDataCursor {
       }
     }
 
-    if (move.to && move.to.length >= 2) {
+    // Lastly we should end with some kind of delimiter, so we'll store "unknown" characters until we find something useful.
+    let unknown = '';
+    while (!this.isMoveStop(this.peekToken())) {
+      unknown += this.read();
+    }
+    if (unknown.length) {
+      move.unknown = unknown;
+    }
+
+    if (move.to && move.to.length) {
       return move;
     }
 
     console.log(`bad move = ${JSON.stringify(move)}`);
     return null;
+  }
+
+  isMoveStop(token: PgnTokenType) {
+    switch (token) {
+      case PgnTokenType.NAG: //'$',
+      case PgnTokenType.SymbolExt: //'-extra',
+      case PgnTokenType.SymbolChar: //'alpha-num',
+      case PgnTokenType.Unknown: //'unknown',
+        return false;
+      default:
+        return true;
+    }
   }
 }
 

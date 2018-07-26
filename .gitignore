@@ -5,3 +5,4 @@ node_modules/
 *.orig
 *.log
 *.tgz
+/modules/pgn-parser/test-data

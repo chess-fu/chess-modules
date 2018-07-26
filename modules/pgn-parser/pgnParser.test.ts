@@ -23,7 +23,50 @@ describe('PgnDataCursor', function () {
     assert.equal(headers.g, 'hi');
   });
 
-  it.only('parses full game', function () {
+  it('parses game with annotations', function () {
+    const parser = new PgnParser();
+    const games = parser.parse(`
+    1.e4 c7-c6 2.Nf3 d5$01 3...Nc3?? Bg4+! 4.h3 Bxf3 *
+    `);
+    assert.equal(games.length, 1);
+    assert.equal(games[0].history.length, 9);
+    const moves = games[0].history;
+    // moves are numbered
+    for (let i = 1; i <= 4; i++) assert(moves[(i - 1) * 2].number === i);
+    assert.equal(moves[8].result, '*');
+    assert.equal(moves[7].piece, 'B');
+    assert.equal(moves[7].capture, true);
+    assert.equal(moves[7].to, 'f3');
+    assert.equal(moves[7].san, 'Bxf3');
+  });
+
+  it.only('parses game with comments', function () {
+    const parser = new PgnParser();
+    const games = parser.parse(`
+    1.e4 {solid open} c7-c6 {really?} 2. {time for knights} Nf3 d5 {here we are}3.{
+    this move!
+    }Nc3 Bg4 4.h3 Bxf3 {one}{and two!}; and a three
+    {game stops} *
+    `);
+    assert.equal(games.length, 1);
+    assert.equal(games[0].history.length, 9);
+    const moves = games[0].history;
+    assert.equal(moves[8].result, '*');
+    assert.deepEqual(moves[7], {
+      piece: 'B',
+      capture: true,
+      to: 'f3',
+      san: 'Bxf3',
+      comments: [
+        'one',
+        'and two!',
+        ' and a three',
+        'game stops'
+      ]
+    });
+  });
+
+  it('parses full game', function () {
     const parser = new PgnParser();
     const games = parser.parse(`
     [Event "21st European Teams"]
@@ -48,11 +91,60 @@ describe('PgnDataCursor', function () {
     console.log(JSON.stringify(games, null, 2));
   });
 
-  it('parses game with annotations', function () {
+  it('parses game with rav and comments', function () {
     const parser = new PgnParser();
     const games = parser.parse(`
-    1.e4 c7-c6 2.Nf3 d5$01 3...Nc3?? Bg4+! 4.h3 Bxf3 *
+    [Event "2012 ROCHESTER GRAND WINTER OPEN"]
+    [Site "Rochester"]
+    [Date "2012.02.04"]
+    [Round "1"]
+    [White "Jensen, Matthew"]
+    [Black "Gaustad, Kevin"]
+    [Result "1-0"]
+    [ECO "E01"]
+    [WhiteElo "2131"]
+    [BlackElo "1770"]
+    [Annotator "Jensen, Matthew"]
+    [PlyCount "61"]
+    [EventDate "2012.02.02"]
+    [Eventtype "swiss"]
+    [Eventrounds "5"]
+    [Eventcountry "USA"]
+    [Sourcedate "2012.02.23"]
+    [CurrentPosition "r1bqk2r/pp1nbppp/2p1pn2/3p4/2PP4/5NP1/PP2PPBP/RNBQ1RK1 w kq - 4 7"]
+    
+    { Kevin and I go way back.  I checked the USCF player stats and my previous record against Kevin was 4 losses and 1 draw out 
+    of 5 games.  All of our previous games were between 1992-1998. } 1.d4 Nf6 2.c4 e6 3.g3 { Avrukh says to play 3.g3 instead of 
+    3.Nf3 in case the Knight later comes to e2, as in the Bogo-Indian. } 3...d5 4.Bg2 c6 5.Nf3 Be7 6.O-O Nbd7 7.b3?! { My idea is to
+    exchange dark-squared bishops and develop in the center. } ( 7.Qc2 O-O 8.Nbd2 b6 9.e4 { would have followed Avrukh's repertoire.  
+    Play could continue } 9...Bb7 10.e5 Ne8 11.cxd5 cxd5 12.Re1 Rc8 13.Qa4 (
+    13.Qd1 Qc7 14.Nf1 Qc2 15.Qxc2 Rxc2 16.Ne3 Rc8 17.Bd2 Nc7 18.Rac1 Ba6 19.h4 b5 20.Bf1 Nb6 21.b3 Ba3 22.Rc2 Nca8 23.Bd3 Rc7 24.Rxc7 
+    Nxc7 25.Nc2 Be7 26.Nb4 Bb7 27.Rc1 Rc8 28.Nc6 Bxc6 29.Rxc6 b4 30.Ne1 Nca8 31.Rxc8+ Nxc8 32.Ba6 Ncb6 33.Nc2 Nc7 34.Bxb4 Bxh4 35.Bd3 
+    Bd8 36.f4 f5 37.Bd6 Nd7 38.Kf2 Kf7 39.Ke3 h5 40.Be2 g6 41.Ne1 Ne8 42.Bb4 Nb8 43.Nf3 Nc6 44.Bc5 Be7 45.Bb5 Bxc5 46.Ng5+ { 1-0 (46) 
+    Kasimdzhanov,R (2670)-Richter,M (2407)/Germany 2006/CBM 111/[Ribli] }    )
+    13...Bc6 14.Qb3 b5 15.Bf1 Qb6 16.Bd3 ) 7...b6 { I was a little surprised that Black was waiting so long to castle.  I went ahead 
+    with my plan of exchanging dark-squared bishops, and breaking in the center when  it is advantageous for me. } 8.Ba3 Bxa3 9.Nxa3 {
+    In hindsight, the knight on a3 looks a bit out of play since it does not cover e4. } 9...Qe7 10.cxd5 { Since I'm ahead in development 
+    I decided to exchange on d5.  If Black recaptures with the c-pawn I jump  to b5, and with the e-pawn it leaves a weakness on c6.  
+    Bc8-a6 is a bit annoying
+    after exd5, so I planned on relocating my a3-knight to e3. } 10...exd5 ( 10...Qxa3 { looked too dangerous for Black.  For example 
+    } 11.dxc6 Nf8 12.Ne5 Nd5? ( { Houdini 1.5a x64: } 12...Ba6 13.Nc4 Bxc4 14.bxc4 Ng6 15.e4 { -0.11/19 } ) 13.e4 Nb4 14.d5 { with 
+    a strong attack. } ) 11.Nc2 Ne4 ( 11...Ba6 12.Ne3 O-O { was  expected.  I think this position is about equal since Black can 
+    put a rook on the c- and e-file with no problems. } ) 12.Ne3 Ndf6 { My plan now was to start  applying pressure as quickly as 
+    possible, starting with the c6 pawn. } 13.Ne5 Bd7?! 14.Rc1 Rc8 15.b4! O-O ( 15...Qxb4? { is losing after } 16.Nxd7 Kxd7 ( 16...Nxd7
+    17.Nxd5 ) 17.Bh3+ ) 16.Qa4 { I think at this point I have a clear advantage. } 16...Nd2 { I didn't consider this idea of playing 
+    Ne4-d2-c4 followed by  b7-b5. } ( 16...b5 17.Qxa7 Ra8 18.Qb7 { threatening Nxc6. } ) 17.Rfd1 Nc4 18.N3xc4 b5 19.Qxa7 bxc4 20.Qc5 
+    Qe6 21.Rc3 ( 21.a4 { looks stronger. } ) 21...Ra8 22.Re3 Qf5 23.Qd6 ( 23.Rf1 Rxa2 24.Nxc6 Bxc6 25.Qxc6 Rc8 26.Qb7 { is similar to 
+    the 23...Rxa2 line except I didn't lose a tempi playing 23.Qd6 before capturing on c6. } 26...Raa8 27.Re5 { and d5 will fall. } ) 
+    23...Qc2 ( 23...Rxa2 24.Nxc6 Bxc6 25.Qxc6 Rc8 26.Qb7 { looks close to equal. } 26...Raa8 27.Re5 Qc2 { slows White down. } ) 24.Rf1 {
+    I stopped recording here due to time  pressure, but was able to reconstruct the game afterwards. } 24...Be8 25.Nxc6 Bxc6 26.Qxc6 
+    Rxa2? 27.Bxd5 Nxd5 28.Qxd5 Rb2 29.Qc5 Rb8 30.Qc6? ( 30.d5 h6 31.d6 { is much more convincing } ) 30...R2xb4 ( 30...g6 31.d5 R2xb4 32.
+    d6 { should still be winning } ) 31.Re8+ { Improvements:  - Exchanging dark-squared  bishops wasn't the best plan.  I should have 
+    played the standard Qc2 and e2-e4. - 23.Qd6 was a mistake since Black had the chance to equalize after 23...Rxa2. I should have 
+    played Rf1 preparing for 23...Rxa2. } 1-0
     `);
-    console.log(JSON.stringify(games, null, 2));
+
+    console.log(games[0].history.map(m => JSON.stringify(m)).join('\n\n'));
   });
+
 });

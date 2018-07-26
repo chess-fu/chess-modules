@@ -1,56 +1,6 @@
+import { HeaderEntry, MoveHistory } from './pgnTypes';
+import PgnGame from './pgnGame';
 import { PgnDataCursor, PgnTokenType } from './pgnDataCursor';
-
-export interface PgnComment {
-
-}
-
-export enum ResultTypes {
-  WhiteWins = '1-0',
-  BlackWins = '0-1',
-  Draw = '1/2-1/2',
-  Ongoing = '*',
-}
-
-export interface MoveHistory {
-  number?: number;
-  san?: string;
-  from?: string;
-  to?: string;
-  piece?: string;
-  nag?: string;
-  check?: string;
-  capture?: boolean;
-  promotion?: string;
-  annotations?: string;
-  comments?: string[];
-  result?: string;
-}
-
-export interface HeaderEntry {
-  name?: string;
-  value?: string;
-  comments?: string[];
-}
-
-export class PgnGame {
-  readonly headers: HeaderEntry[];
-  readonly history: MoveHistory[];
-
-  constructor() {
-    this.headers = [];
-    this.history = [];
-  }
-
-  headersMap(): { [key: string]: string } {
-    const result: { [key: string]: string } = {};
-    for (const header of this.headers) {
-      if (header.name && header.value) {
-        result[header.name] = header.value;
-      }
-    }
-    return result;
-  }
-}
 
 export class PgnParser {
   parse(data: string): PgnGame[] {
@@ -94,7 +44,7 @@ export class PgnParser {
     }
   }
 
-  parseMoves(cursor: PgnDataCursor, history: MoveHistory[]) {
+  parseMoves(cursor: PgnDataCursor, history: MoveHistory[], depth: number = 0) {
     let lastPos = -1;
     let comments: string[] = [];
 
@@ -106,12 +56,14 @@ export class PgnParser {
       lastPos = cursor.position();
 
       cursor.skipWhitespace(false, comments);
+      const token = cursor.peekToken();
+
       if (comments.length) {
         history.push({ comments });
         comments = [];
       }
 
-      if (cursor.peekToken() === PgnTokenType.Newline) {
+      if (token === PgnTokenType.Newline) {
         cursor.read();
         if (cursor.peekToken() === PgnTokenType.Newline) {
           return; // done.
@@ -122,7 +74,7 @@ export class PgnParser {
       }
 
       // Nearly all possible move entries start with either a number, or a letter
-      if (cursor.peekToken() === PgnTokenType.SymbolChar || cursor.peekToken() === PgnTokenType.Asterisks) {
+      if (token === PgnTokenType.SymbolChar || token === PgnTokenType.Asterisks) {
         const move = this.parseMove(cursor);
         if (move) {
           history.push(move);
@@ -131,13 +83,33 @@ export class PgnParser {
           break;
         }
       }
+      else if (token === PgnTokenType.RavStart) {
+        cursor.read();
+        const ravHistory: MoveHistory[] = [];
+        // Recursive parser
+        this.parseMoves(cursor, ravHistory, (depth || 0) + 1);
+        const prevMove = history.length > 0 ? history[history.length - 1] : undefined;
+        if (prevMove && !prevMove.rav) {
+          prevMove.rav = ravHistory;
+        }
+        else {
+          history.push({ rav: ravHistory });
+        }
+      }
+      else if (token === PgnTokenType.RavEnd) {
+        if (depth <= 0) {
+          cursor.throwError('Unexpected close of RAV');
+        }
+        cursor.read();
+        break;
+      }
       else {
         return; // last move.
       }
     }
   }
 
-  parseMove(cursor: PgnDataCursor, depth?: number): MoveHistory | null {
+  parseMove(cursor: PgnDataCursor): MoveHistory | null {
     const comments: string[] = [];
     const move: MoveHistory = {};
 
@@ -198,18 +170,8 @@ export class PgnParser {
         }
         cursor.throwError('Expected move notation');
       }
-      else if (token === PgnTokenType.RavStart) {
-        cursor.throwError('TODO: Not implemented.');
-      }
-      else if (token === PgnTokenType.RavEnd) {
-        if (!depth) {
-          cursor.throwError('Unexpected close of NAG');
-        }
-        cursor.read();
-        break;
-      }
       else {
-        cursor.throwError('Unexpected data found');
+        return null;
       }
     }
 
