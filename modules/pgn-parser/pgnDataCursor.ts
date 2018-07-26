@@ -17,7 +17,6 @@ export enum PgnTokenType {
   ExpansionEnd = '>',
   LineEscape = '%',
   Quote = '"',
-  Backslash = '\\',
   CommentToEOL = ';',
   FullStop = '.',
   Asterisks = '*',
@@ -47,7 +46,7 @@ export class PgnDataCursor {
     this._lineOffset = 0;
   }
 
-  throwError(text: string) {
+  throwError(text: string): any {
     const message = `${text} (at line ${this._line}:${this._offset - this._lineOffset})`;
     const error: any = new Error(message);
     error.lineNumber = this._line;
@@ -104,7 +103,6 @@ export class PgnDataCursor {
       case '>': return PgnTokenType.ExpansionEnd;
       case '%': return PgnTokenType.LineEscape;
       case '"': return PgnTokenType.Quote;
-      case '\\': return PgnTokenType.Backslash;
       case ';': return PgnTokenType.CommentToEOL;
       case '.': return PgnTokenType.FullStop;
       case '*': return PgnTokenType.Asterisks;
@@ -162,11 +160,7 @@ export class PgnDataCursor {
     return result.join('');
   }
 
-  readonly Readers = {
-    SymbolExt: () => {
-      const symbol = this.peekToken();
-      return symbol === PgnTokenType.SymbolChar || symbol === PgnTokenType.SymbolExt;
-    },
+  private readonly Readers = {
     SymbolSimple: () => {
       return this.peekToken() === PgnTokenType.SymbolChar || this.peek() === '_';
     },
@@ -181,12 +175,11 @@ export class PgnDataCursor {
     }
   };
 
-  readSymbol(simple: boolean = false) {
+  readSymbol() {
     if (this.peekToken() !== PgnTokenType.SymbolChar) {
-      this.throwError(`Expected a symbol start character`);
-      return '';
+      return this.throwError(`Expected a symbol start character`);
     }
-    return this.read() + this.readWhile(simple ? this.Readers.SymbolSimple : this.Readers.SymbolExt);
+    return this.read() + this.readWhile(this.Readers.SymbolSimple);
   }
 
   readAll(char: string, limit?: number) {
@@ -217,10 +210,9 @@ export class PgnDataCursor {
     return parseInt(digits.join(''), 10);
   }
 
-  readString(): string | null {
+  readString(): string {
     if (this.peekToken() !== PgnTokenType.Quote) {
-      this.throwError(`Expected a quoted string`);
-      return null;
+      return this.throwError(`Expected a quoted string`);
     }
     this.read();
 
@@ -236,7 +228,7 @@ export class PgnDataCursor {
         }
       }
       if (next === '\n' || next === '\r') {
-        this.throwError(`String contains new line "${result.join('')}"`);
+        return this.throwError(`String contains new line "${result.join('')}"`);
       }
 
       result.push(next);
@@ -244,7 +236,7 @@ export class PgnDataCursor {
     }
 
     if (next !== '"') {
-      this.throwError(`Unterminated string "${result.join('')}"`);
+      return this.throwError(`Unterminated string "${result.join('')}"`);
     }
 
     return result.join('');
@@ -264,10 +256,6 @@ export class PgnDataCursor {
         if (this.peekToken() === PgnTokenType.Newline) {
           this.read();
         }
-        else if (this.peekToken() !== PgnTokenType.EndOfFile) {
-          this.restore(savePos);
-          this.throwError('Unterminated line comment.');
-        }
       }
       else if (next === PgnTokenType.CommentStart) {
         this.read();
@@ -277,7 +265,7 @@ export class PgnDataCursor {
         }
         else {
           this.restore(savePos);
-          this.throwError('Unterminated comment.');
+          return this.throwError('Unterminated comment.');
         }
       }
       else if (next === PgnTokenType.ExpansionStart) {
@@ -288,15 +276,12 @@ export class PgnDataCursor {
         }
         else {
           this.restore(savePos);
-          this.throwError('Unterminated expansion text.');
+          return this.throwError('Unterminated expansion text.');
         }
       }
       else if (next === PgnTokenType.LineEscape && (this._offset === this._lineOffset)) {
         this.read();
         this.readWhile(this.Readers.NotNewline);
-        if (this.peekToken() === PgnTokenType.CommentEnd) {
-          this.read();
-        }
       }
       else {
         break;
@@ -326,8 +311,7 @@ export class PgnDataCursor {
 
   readTagPair(): HeaderEntry | null {
     if (this.peekToken() !== PgnTokenType.TagPairStart) {
-      this.throwError(`Expected a tag-pair open`);
-      return null;
+      return this.throwError(`Expected a tag-pair open`);
     }
 
     const comments: string[] = [];
@@ -335,28 +319,22 @@ export class PgnDataCursor {
     const savePos = this.save();
     this.read();
     this.skipWhitespace(true, comments);
-    const symbol = this.readSymbol(true);
+    const symbol = this.readSymbol();
     this.skipWhitespace(true, comments);
     const value = this.readString();
     this.skipWhitespace(true, comments);
 
     if (this.peekToken() !== PgnTokenType.TagPairEnd) {
       this.restore(savePos);
-      this.throwError(`The tag pair ${symbol} = ${value} was not closed`);
-      return null;
+      return this.throwError(`The tag pair ${symbol} = ${value} was not closed`);
     }
     this.read();
 
-    if (symbol && typeof value === 'string') {
-      const hdr: HeaderEntry = { name: symbol, value };
-      if (comments.length) {
-        hdr.comments = comments;
-      }
-      return hdr;
+    const hdr: HeaderEntry = { name: symbol, value };
+    if (comments.length) {
+      hdr.comments = comments;
     }
-
-    this.restore(savePos);
-    return null;
+    return hdr;
   }
 
   private readonly pieceSAN = {
@@ -367,11 +345,13 @@ export class PgnDataCursor {
   readMoveText(): MoveHistory | null {
     const savePos = this.save();
     const startPos = this.position();
+    let rawText = '';
     let move: MoveHistory | null = null;
     try {
       move = this._readMoveText();
-      if (move) {
-        move.raw = this.readFromPrevious(startPos);
+      rawText = this.readFromPrevious(startPos);
+      if (move && move.to) {
+        move.raw = rawText;
         move.san = move.piece === 'P' ? '' : move.piece;
         if (move.piece === 'K' && move.to && move.to[0] === 'O') {
           move.san = '';
@@ -389,8 +369,7 @@ export class PgnDataCursor {
         this.restore(savePos);
       }
     }
-    console.log(`Invalid move at "${this._data.substr(this._offset, 8)}"`);
-    return null;
+    return this.throwError(`Invalid move "${rawText}"`);
   }
 
   private _readMoveText(): MoveHistory | null {
@@ -456,13 +435,13 @@ export class PgnDataCursor {
     // ## Promotion of pawn
     if (next === '=') {
       if (move.piece !== 'P') {
-        this.throwError(`Invalid promotion from piece ${move.piece}`);
+        return this.throwError(`Invalid promotion from piece ${move.piece}`);
       }
       this.read();
       next = this.peek();
       move.promotion = this.read().toUpperCase();
       if (move.promotion !== 'Q' && move.promotion !== 'B' && move.promotion !== 'N' && move.promotion !== 'R') {
-        this.throwError(`Invalid promotion to piece ${move.promotion}`);
+        return this.throwError(`Invalid promotion to piece ${move.promotion}`);
       }
     }
 
@@ -491,7 +470,7 @@ export class PgnDataCursor {
       if (found) {
         this.seek(found.length);
         if (move.annotations) {
-          this.throwError(`Found multiple annotations "${move.annotations} and ${found}`);
+          return this.throwError(`Found multiple annotations "${move.annotations} and ${found}`);
         }
         move.annotations = found;
       }
@@ -500,7 +479,7 @@ export class PgnDataCursor {
       if (found) {
         this.seek(found.length);
         if (move.check) {
-          this.throwError(`Found multiple check flags "${move.check} and ${found}`);
+          return this.throwError(`Found multiple check flags "${move.check} and ${found}`);
         }
         move.check = found;
       }
@@ -513,10 +492,10 @@ export class PgnDataCursor {
         this.read();
         const nagNum = this.readNumber();
         if (typeof nagNum !== 'number') {
-          this.throwError(`Invalid NAG supplied`);
+          return this.throwError(`Invalid NAG supplied`);
         }
         if (move.nag) {
-          this.throwError(`Found multiple annotations "${move.nag} and ${nagNum}`);
+          return this.throwError(`Found multiple annotations "${move.nag} and ${nagNum}`);
         }
         move.nag = '$' + `${nagNum}`;
       }
@@ -535,7 +514,7 @@ export class PgnDataCursor {
       return move;
     }
 
-    console.log(`bad move = ${JSON.stringify(move)}`);
+    // console.log(`bad move = ${JSON.stringify(move)}`);
     return null;
   }
 
@@ -545,6 +524,8 @@ export class PgnDataCursor {
       case PgnTokenType.SymbolExt: //'-extra',
       case PgnTokenType.SymbolChar: //'alpha-num',
       case PgnTokenType.Unknown: //'unknown',
+      case PgnTokenType.LineEscape: //'%'
+      case PgnTokenType.Quote: //'"'
         return false;
       default:
         return true;

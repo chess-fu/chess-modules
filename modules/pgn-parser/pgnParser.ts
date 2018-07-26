@@ -6,9 +6,14 @@ export class PgnParser {
   parse(data: string): PgnGame[] {
     const games: PgnGame[] = [];
     const cursor = new PgnDataCursor(data);
-
+    let lastPos = -1;
 
     while (!cursor.isEOF()) {
+      if (lastPos === cursor.position()) {
+        return cursor.throwError('No progress made'); // safety check
+      }
+      lastPos = cursor.position();
+
       const game = new PgnGame();
       // Parse 1 game
       try {
@@ -20,7 +25,6 @@ export class PgnParser {
           games.push(game);
         }
       }
-      break;
     }
     return games;
   }
@@ -50,8 +54,7 @@ export class PgnParser {
 
     while (!cursor.isEOF()) {
       if (lastPos === cursor.position()) {
-        cursor.throwError('No progress made');
-        break;
+        return cursor.throwError('No progress made'); // safety check
       }
       lastPos = cursor.position();
 
@@ -104,7 +107,12 @@ export class PgnParser {
         break;
       }
       else {
-        return; // last move.
+        if (token === PgnTokenType.EndOfFile) {
+          return; // last move.
+        }
+        else {
+          return cursor.throwError(`Expected move text, found "${cursor.peek()}"`);
+        }
       }
     }
   }
@@ -116,8 +124,7 @@ export class PgnParser {
     let lastPos = -1;
     while (!cursor.isEOF()) {
       if (lastPos === cursor.position()) {
-        cursor.throwError('No progress made');
-        break;
+        return cursor.throwError('No progress made'); // safety check
       }
       lastPos = cursor.position();
       cursor.skipWhitespace(false, comments);
@@ -127,11 +134,7 @@ export class PgnParser {
       let temp: any;
 
       if (token === PgnTokenType.Newline) {
-        cursor.read();
-        if (cursor.peekToken() === PgnTokenType.Newline) {
-          move.result = '*';
-          break;
-        }
+        break;
       }
       else if (letter >= '0' && letter <= '9') {
         // Assumption: SAN should not begin with a number, thus this is a move number

@@ -4,6 +4,7 @@ import { PgnParser } from './pgnParser';
 import { PgnDataCursor } from './pgnDataCursor';
 import { movesToString } from './pgnDataCursor-moves.test';
 import { MoveHistory } from './pgnGame';
+import { Hastings1999 } from './pgnDataset.test';
 
 describe('PgnParser', function () {
 
@@ -41,6 +42,17 @@ describe('PgnParser', function () {
     assert.equal(moves[4].to, 'c3');
     assert.equal(moves[4].raw, 'Nc3??');
     assert.equal(moves[4].san, 'Nc3');
+  });
+
+  it('parses game with no stop', function () {
+    const parser = new PgnParser();
+    const games = parser.parse(`
+    1.e4 c7 2.Nf3 d5 3.Nc3 Bg4 4.h3 Bxf3
+
+[Next "Game"]`);
+    assert.equal(games.length, 2);
+    assert.equal(games[0].history.length, 8);
+    assert.equal(games[0].history[7].raw, 'Bxf3');
   });
 
   it('parses game with comments', function () {
@@ -185,6 +197,13 @@ describe('PgnParser', function () {
     assert.deepEqual(move, { raw: '...', to: '...' });
   });
 
+  it('parses a move of ....', function () {
+    const cursor = new PgnDataCursor('....');
+    const parser = new PgnParser();
+    const move = parser.parseMove(cursor);
+    assert.deepEqual(move, { raw: '...', to: '...' });
+  });
+
   it('parses numbered moves', function () {
     const parser = new PgnParser();
     const movePossibles = [
@@ -214,4 +233,17 @@ describe('PgnParser', function () {
     }
   });
 
+  it('Parses a full PGN game dataset', function () {
+    const parser = new PgnParser();
+    const games = parser.parse(Hastings1999);
+    assert.equal(games.length, 44);
+    const lastgame = games[games.length - 1];
+    const lastmove = lastgame.moves()[lastgame.moves().length - 1];
+    assert.deepEqual(lastmove, { number: 31, piece: 'Q', to: 'e8', san: 'Qe8', raw: 'Qe8' });
+  });
+
+  it('throws if not move text', function () {
+    const parser = new PgnParser();
+    assert.throws(() => parser.parse(`[A "B"]\n\n1.c4 / e7`), 'Expected move text');
+  });
 });

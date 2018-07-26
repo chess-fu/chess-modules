@@ -20,6 +20,10 @@ export class PgnGame {
     }
     return result;
   }
+
+  moves(): MoveHistory[] {
+    return this.history.filter(m => m.san);
+  }
 }
 
 export default PgnGame;
