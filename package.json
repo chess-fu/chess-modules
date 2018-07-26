@@ -48,12 +48,14 @@
 	},
 	"nyc": {
 		"check-coverage": false,
-		"per-file": false,
 		"extension": [
 			".ts"
 		],
 		"include": [
 			"modules/**/*.ts"
+		],
+		"exclude": [
+			"modules/**/*.test.ts"
 		],
 		"reporter": [
 			"text-summary",

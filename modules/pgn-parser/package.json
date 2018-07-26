@@ -25,7 +25,10 @@
 	"files": [
 		"readme.md",
 		"dist/pgn-parser.min.js",
-		"dist/types/pgnParser.d.ts"
+		"dist/types/pgnDataCursor.d.ts",
+		"dist/types/pgnGame.d.ts",
+		"dist/types/pgnParser.d.ts",
+		"dist/types/pgnTypes.d.ts"
 	],
 	"scripts": {
 		"prebuild": "../../node_modules/.bin/rimraf ./dist",
