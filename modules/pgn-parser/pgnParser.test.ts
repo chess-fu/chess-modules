@@ -84,7 +84,7 @@ describe('PgnParser', function () {
 
   it('parses full game', function () {
     const parser = new PgnParser();
-    const games = parser.parse(`
+    const [game] = parser.parse(`
     [Event "21st European Teams"]
     [Site "Hersonissos GRE"]
     [Date "2017.10.29"]
@@ -104,10 +104,10 @@ describe('PgnParser', function () {
     37.Be2 bxc3 38.bxc3 Bc5 39.Qd3 Qd6 40.Qxd6 Bxd6 41.f4 Bc5 42.Kf3 Kf8 43.Bc4 Bg1
     44.Ra2 Rb8 45.Ra6 Rc8 46.Ra1 1/2-1/2
     `);
-    assert.equal(games.length, 1);
-    assert.equal(games[0].headers.length, 10);
-    assert.equal(games[0].history.length, 92);
-    const moves = games[0].history;
+    assert.isObject(game);
+    assert.equal(game.headers.length, 10);
+    assert.equal(game.history.length, 92);
+    const moves = game.history;
     assert.equal(moves[moves.length - 1].result, '1/2-1/2');
   });
 
