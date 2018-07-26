@@ -40,7 +40,7 @@ describe('PgnDataCursor', function () {
     assert.equal(moves[7].san, 'Bxf3');
   });
 
-  it.only('parses game with comments', function () {
+  it('parses game with comments', function () {
     const parser = new PgnParser();
     const games = parser.parse(`
     1.e4 {solid open} c7-c6 {really?} 2. {time for knights} Nf3 d5 {here we are}3.{
@@ -88,10 +88,14 @@ describe('PgnDataCursor', function () {
     37.Be2 bxc3 38.bxc3 Bc5 39.Qd3 Qd6 40.Qxd6 Bxd6 41.f4 Bc5 42.Kf3 Kf8 43.Bc4 Bg1
     44.Ra2 Rb8 45.Ra6 Rc8 46.Ra1 1/2-1/2
     `);
-    console.log(JSON.stringify(games, null, 2));
+    assert.equal(games.length, 1);
+    assert.equal(games[0].headers.length, 10);
+    assert.equal(games[0].history.length, 92);
+    const moves = games[0].history;
+    assert.equal(moves[moves.length - 1].result, '1/2-1/2');
   });
 
-  it('parses game with rav and comments', function () {
+  it.only('parses game with rav and comments', function () {
     const parser = new PgnParser();
     const games = parser.parse(`
     [Event "2012 ROCHESTER GRAND WINTER OPEN"]
@@ -143,8 +147,18 @@ describe('PgnDataCursor', function () {
     played the standard Qc2 and e2-e4. - 23.Qd6 was a mistake since Black had the chance to equalize after 23...Rxa2. I should have 
     played Rf1 preparing for 23...Rxa2. } 1-0
     `);
+    assert.equal(games.length, 1);
+    assert.equal(games[0].headers.length, 19); // 18 headers plus first comment... TODO fix this so that \n\n terminates headers
+    assert.equal(games[0].history.length, 62);
+    const moves = games[0].history;
+    assert.equal(moves[moves.length - 1].result, '1-0');
 
-    console.log(games[0].history.map(m => JSON.stringify(m)).join('\n\n'));
+    const ravs = moves.filter(m => m.rav);
+    assert.equal(ravs.length, 10);
+
+    const nested = (ravs[0].rav || []).filter(m => m.rav);
+    assert.equal(nested.length, 1);
+    assert.equal((nested[0].rav || []).length, 1);
   });
 
 });
