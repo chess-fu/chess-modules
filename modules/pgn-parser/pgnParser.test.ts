@@ -34,10 +34,10 @@ describe('PgnDataCursor', function () {
     // moves are numbered
     for (let i = 1; i <= 4; i++) assert(moves[(i - 1) * 2].number === i);
     assert.equal(moves[8].result, '*');
-    assert.equal(moves[7].piece, 'B');
-    assert.equal(moves[7].capture, true);
-    assert.equal(moves[7].to, 'f3');
-    assert.equal(moves[7].san, 'Bxf3');
+    assert.equal(moves[4].piece, 'N');
+    assert.equal(moves[4].to, 'c3');
+    assert.equal(moves[4].raw, 'Nc3??');
+    assert.equal(moves[4].san, 'Nc3');
   });
 
   it('parses game with comments', function () {
@@ -56,6 +56,7 @@ describe('PgnDataCursor', function () {
       piece: 'B',
       capture: true,
       to: 'f3',
+      raw: 'Bxf3',
       san: 'Bxf3',
       comments: [
         'one',
@@ -95,7 +96,7 @@ describe('PgnDataCursor', function () {
     assert.equal(moves[moves.length - 1].result, '1/2-1/2');
   });
 
-  it.only('parses game with rav and comments', function () {
+  it('parses game with rav and comments', function () {
     const parser = new PgnParser();
     const games = parser.parse(`
     [Event "2012 ROCHESTER GRAND WINTER OPEN"]
@@ -158,7 +159,7 @@ describe('PgnDataCursor', function () {
 
     const nested = (ravs[0].rav || []).filter(m => m.rav);
     assert.equal(nested.length, 1);
-    assert.equal((nested[0].rav || []).length, 1);
+    assert.equal((nested[0].rav || []).length, 67);
   });
 
 });

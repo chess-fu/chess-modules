@@ -371,7 +371,13 @@ export class PgnDataCursor {
     try {
       move = this._readMoveText();
       if (move) {
-        move.san = this.readFromPrevious(startPos);
+        move.raw = this.readFromPrevious(startPos);
+        move.san = move.piece === 'P' ? '' : move.piece;
+        move.san += move.from || '';
+        move.san += move.capture ? 'x' : '';
+        move.san += move.to || '';
+        move.san += move.promotion ? ('=' + move.promotion) : '';
+        move.san += move.check === '+' ? '+' : (move.check ? '#' : '');
         return move;
       }
     }
