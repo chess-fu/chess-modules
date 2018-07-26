@@ -66,8 +66,42 @@ Basic Usage:
     assert.equal(game.history[91].result, '1/2-1/2');
   }
 ```
+### `interface HeaderEntry`
 
-### Members
+- `name: string` The TAG token
+- `value: string` The quoted string as an unescaped string value
+- `comments: string[]` Comments encountered 
+
+### `class MoveHistory`
+
+- `number: number` The move indicator if one preceded this move 
+- `raw: string` The plain-text of the move that was parsed 
+- `san: string` The normalized SAN without annotations 
+- `from: string` The originating file, rank or both 
+- `to: string` The target file, rank, both, or castle 
+- `piece: string` The piece that was moved 
+- `nag: string` The NAG string, $ followed by a number 
+- `rav: MoveHistory[]` The RAV alternative play 
+- `check: string` The move check or mate indicator 
+- `capture: boolean` True if this was a capture 
+- `promotion: string` Promotion type: Q, R, N, or B 
+- `annotations: string` Annotations like !, ?, !?, etc 
+- `comments: string[]` Comments encountered 
+- `result: string` A game result, 1-0, 0-1, 1/2-1/2, or "*"
+- `unknown: string` Other non-delimiter characters following the parsed move 
+
+### `class PgnGame`
+
+- `readonly headers: HeaderEntry[]` Returns the structured content found in the headers/tag-pairs.
+- `readonly history: MoveHistory[]` Returns the structured move text context.
+- `headersMap(): { [key: string]: string }` Returns a key-value map of headers as an object.
+- `moves(): MoveHistory[]` Returns the move history excluding any non-move entries.
+
+### `class PgnParser`
+
+- `parse(data: string): PgnGame[]` The main parse API to parse one or more games from text.
+
+**Note:** There are other classes and members available; however, they are not deemed part of the API. Direct use of classes/members not listed above is not recommended.
 
 ## LINKS
 
