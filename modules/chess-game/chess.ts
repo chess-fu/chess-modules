@@ -1,6 +1,5 @@
 import FenParser from '@chess-fu/fen-parser';
-
-import { MoveTable, Offset } from './chessMoves';
+import { MoveTable, Offset, WHEN_START_AND_EMPTY, WHEN_EMPTY, WHEN_ATTACKING } from './chessMoves';
 
 export const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -13,26 +12,28 @@ export interface Move {
   to: string;
   san: string;
   castle?: string; // set to the rook's square
-  enpass?: boolean;
   check?: '+' | '#';
-  capture?: string;
+  enpass?: boolean;
+  captured?: string;
   promotion?: string;
 }
 
-export interface MoveData extends Move, Offset {
+interface MoveData extends Move, Offset {
   restoreFEN?: string;
 }
 
-const EMPTY_ARRAY: any[] = Object.freeze<any[]>([]) as any[];
-const BOARD_WIDTH = 8;
-const BOARD_HEIGHT = 8;
-const BOARD_SIZE = BOARD_WIDTH * BOARD_HEIGHT;
-const EMPTY_BOARD = () => { const r = new Array<string>(BOARD_SIZE); for (let i = 0; i < BOARD_SIZE; i++) r[i] = '-'; return r; };
+const lowerACode = 'a'.charCodeAt(0);
+const letter0Code = '0'.charCodeAt(0);
 
-const lowerA = 'a'.charCodeAt(0);
-const letter0 = '0'.charCodeAt(0);
+const lowerA = 'a';
+const lowerZ = 'z';
+const upperA = 'A';
+const upperZ = 'Z';
 
 const INDEXES: { [key: string]: number } = {};
+
+const WHITE = 'w';
+const BLACK = 'b';
 
 const PAWN = 'p';
 const ROOK = 'r';
@@ -41,10 +42,33 @@ const BISHOP = 'b';
 const QUEEN = 'q';
 const KING = 'k';
 
+const PLUS = '+';
+const HASH = '#';
+const NONE = '-';
+const SLASH = '/';
+const SAN_CAPTURE = 'x';
+
+const NUMBER = 'number';
+const STRING = 'string';
+
 const WKING = KING.toUpperCase();
 const BKING = KING.toLowerCase();
 
-const PIECE_TYPES = 'kqbnrp'.split('');
+const EMPTY_STRING = '';
+const EMPTY_ARRAY: any[] = Object.freeze<any[]>([]) as any[];
+const BOARD_WIDTH = 8;
+const BOARD_HEIGHT = 8;
+const BOARD_SIZE = BOARD_WIDTH * BOARD_HEIGHT;
+const EMPTY_BOARD = () => { const r = new Array<string>(BOARD_SIZE); for (let i = 0; i < BOARD_SIZE; i++) r[i] = NONE; return r; };
+
+const PATTERN_FEN_DASH = /\-+/g;
+const PATTERN_PROMOTE_RNB = /=[RNB]/;
+const PATTERN_PROMOTE_TYPE = /=([QRNB])/;
+const PATTERN_ANNOTATION = /(([\!\?]+)|$\d{1,3})+$/;
+const PATTERN_LOWER_CASE = /[a-z]/g;
+const PATTERN_UPPER_CASE = /[A-Z]/g;
+
+const PIECE_TYPES = 'kqbnrp'.split(EMPTY_STRING);
 const PIECES: { [key: string]: string } = {};
 const COLORPIECES: { [key: string]: string } = {};
 
@@ -53,25 +77,30 @@ const COLORPIECES: { [key: string]: string } = {};
   // FEN ORDER: a8 ... h1 = 64
   for (let rank = 0; rank < BOARD_WIDTH; rank++) {
     for (let file = 0; file < BOARD_WIDTH; file++) {
-      INDEXES[`${String.fromCharCode(lowerA + file)}${rank + 1}`] = file + (((BOARD_HEIGHT - 1) - rank) * BOARD_WIDTH);
+      INDEXES[`${String.fromCharCode(lowerACode + file)}${rank + 1}`] = file + (((BOARD_HEIGHT - 1) - rank) * BOARD_WIDTH);
     }
   }
 
   for (const piece of PIECE_TYPES) {
-    PIECES['w' + piece] = piece.toUpperCase();
-    PIECES['b' + piece] = piece.toLowerCase();
+    PIECES[WHITE + piece] = piece.toUpperCase();
+    PIECES[BLACK + piece] = piece.toLowerCase();
     PIECES[piece.toUpperCase()] = piece.toUpperCase();
     PIECES[piece.toLowerCase()] = piece.toLowerCase();
-    COLORPIECES[piece.toUpperCase()] = 'w' + piece;
-    COLORPIECES[piece.toLowerCase()] = 'b' + piece;
+    COLORPIECES[piece.toUpperCase()] = WHITE + piece;
+    COLORPIECES[piece.toLowerCase()] = BLACK + piece;
   }
 })();
 
+function isPieceColor(boardPiece: string, color: Color) {
+  return ((color === WHITE && boardPiece >= upperA && boardPiece <= upperZ) ||
+    (color !== WHITE && boardPiece >= lowerA && boardPiece <= lowerZ));
+}
+
 function indexToSquare(index: number) {
-  if (typeof index !== 'number' || index < 0) return '-';
+  if (typeof index !== NUMBER || index < 0) return NONE;
   const file = Math.floor(index / BOARD_WIDTH);
   const rank = index - (file * BOARD_WIDTH);
-  return String.fromCharCode(lowerA + rank) + (BOARD_HEIGHT - file).toString();
+  return String.fromCharCode(lowerACode + rank) + (BOARD_HEIGHT - file).toString();
 }
 
 function indexToOffset(index: number): Offset {
@@ -118,30 +147,32 @@ function buildSAN(move: Move, conflicts?: Move[]) {
     }
   }
 
-  if (move.capture) {
+  if (move.captured) {
     if (move.piece === PAWN && result.length === 0) {
       result.push(move.from[0]);
     }
-    result.push('x');
+    result.push(SAN_CAPTURE);
   }
   result.push(move.to);
   if (move.promotion) result.push(`=${move.promotion}`);
   if (move.check) result.push(move.check);
-  return result.join('');
+  return result.join(EMPTY_STRING);
 }
 
 export class Chess {
-  private header: { [key: string]: string };
-  private history: MoveData[];
-  private board: string[];
+  private _headers: { [key: string]: string };
+  private _history: MoveData[];
+  private _board: string[];
 
-  private turn: Color;
-  private enpass: number;
-  private halfmoveClock: number;
-  private moveNumber: number;
-  private whiteKing: number;
-  private blackKing: number;
-  private castles: string;
+  private _turn: Color;
+  private _enpass: number;
+  private _halfmoveClock: number;
+  private _moveNumber: number;
+  private _whiteKing: number;
+  private _blackKing: number;
+  private _castles: string;
+  private _checked: boolean;
+  private _gameover: boolean;
 
   constructor(fen?: string) {
     if (fen) {
@@ -153,15 +184,15 @@ export class Chess {
   }
 
   init(saveHeader?: boolean) {
-    if (!saveHeader) this.header = {};
-    this.history = [];
-    this.board = EMPTY_BOARD();
-    this.turn = 'w';
-    this.enpass = -1;
-    this.halfmoveClock = 0;
-    this.moveNumber = 1;
-    this.whiteKing = this.blackKing = -1;
-    this.castles = '';
+    if (!saveHeader) this._headers = {};
+    this._history = [];
+    this._board = EMPTY_BOARD();
+    this._turn = WHITE;
+    this._enpass = -1;
+    this._halfmoveClock = 0;
+    this._moveNumber = 1;
+    this._whiteKing = this._blackKing = -1;
+    this._castles = EMPTY_STRING;
   }
 
   load(fen?: string) {
@@ -171,43 +202,65 @@ export class Chess {
     this.restoreFen(fen);
 
     if (fen !== START_FEN) {
-      this.header = { ...this.header, SetUp: '1', FEN: fen };
+      this._headers = { ...this._headers, SetUp: '1', FEN: fen };
     }
   }
 
   private restoreFen(fen: string) {
     const data = new FenParser(fen || START_FEN);
-    const board = data.ranks.join('').split('');
+    const board = data.ranks.join(EMPTY_STRING).split(EMPTY_STRING);
     if (board.length !== BOARD_SIZE) {
       throw new Error(`Invalid FEN, size expected ${BOARD_SIZE} found ${board.length}`);
     }
-    this.board = [...board];
-    this.whiteKing = board.indexOf(WKING);
-    this.blackKing = board.indexOf(BKING);
+    this._board = [...board];
+    this._whiteKing = board.indexOf(WKING);
+    this._blackKing = board.indexOf(BKING);
 
-    this.castles = data.castles;
-    this.halfmoveClock = data.halfmoveClock;
-    this.moveNumber = data.moveNumber;
-    this.enpass = (data.enpass in INDEXES) ? INDEXES[data.enpass] : -1;
-    this.turn = data.turn === 'b' ? 'b' : 'w';
+    this._castles = data.castles;
+    this._halfmoveClock = data.halfmoveClock;
+    this._moveNumber = data.moveNumber;
+    this._enpass = (data.enpass in INDEXES) ? INDEXES[data.enpass] : -1;
+    this._turn = data.turn === BLACK ? BLACK : WHITE;
+    this.updated();
   }
 
   toString() { return this.fen(); }
   fen() {
     const ranks: string[] = [];
-    const bstring = this.board.map(p => p || '-').join('');
+    const bstring = this._board.map(p => p || NONE).join(EMPTY_STRING);
     for (let file = BOARD_HEIGHT; file > 0; file--) {
-      const index = INDEXES['a' + file.toString()];
+      const index = INDEXES[lowerA + file.toString()];
       ranks.push(bstring.substr(index, BOARD_WIDTH));
     }
-    return ranks.join('/').replace(/\-+/g, m => m.length.toString()) +
-      ` ${this.turn} ${this.castles || '-'} ${indexToSquare(this.enpass)} ${this.halfmoveClock} ${this.moveNumber}`;
+    return ranks.join(SLASH).replace(PATTERN_FEN_DASH, m => m.length.toString()) +
+      ` ${this._turn} ${this._castles || NONE} ${indexToSquare(this._enpass)} ${this._halfmoveClock} ${this._moveNumber}`;
   }
 
-  toPGN() { }
+  pgn(options?: { newline_char: string, max_width: number }) { return EMPTY_STRING; /* TODO */ }
 
   squares(): string[] {
     return Object.keys(INDEXES);
+  }
+
+  turn(): Color {
+    return this._turn;
+  }
+
+  header(...tagPairs: string[]): { [key: string]: string } {
+    for (let i = 0; i < (tagPairs.length - 1); i += 2) {
+      if (typeof tagPairs[i] === STRING &&
+        typeof tagPairs[i + 1] === STRING) {
+        this._headers[tagPairs[i]] = tagPairs[i + 1];
+      }
+    }
+    return this._headers;
+  }
+
+  history(options?: any): Move[] {
+    return this._history.map<Move>(moveData => {
+      const { restoreFEN, x, y, ...move } = moveData;
+      return move as Move;
+    });
   }
 
   get(square: string): string | null {
@@ -215,7 +268,7 @@ export class Chess {
       throw new Error(`Invalid square identifier: "${square}"`);
     }
 
-    const piece = this.board[INDEXES[square]];
+    const piece = this._board[INDEXES[square]];
     if (!piece || !(piece in COLORPIECES)) {
       return null;
     }
@@ -234,13 +287,14 @@ export class Chess {
     const offset = INDEXES[square];
     piece = PIECES[piece];
 
-    this.board[offset] = PIECES[piece];
+    this._board[offset] = PIECES[piece];
     if (piece === WKING) {
-      this.whiteKing = offset;
+      this._whiteKing = offset;
     }
     if (piece === BKING) {
-      this.blackKing = offset;
+      this._blackKing = offset;
     }
+    this.updated();
   }
 
   remove(square: string) {
@@ -248,20 +302,19 @@ export class Chess {
       throw new Error(`Invalid square identifier: "${square}"`);
     }
     const offset = INDEXES[square];
-    this.board[offset] = '-';
-    this.whiteKing = this.whiteKing !== offset ? this.whiteKing : -1;
-    this.blackKing = this.blackKing !== offset ? this.blackKing : -1;
+    this._board[offset] = NONE;
+    this._whiteKing = this._whiteKing !== offset ? this._whiteKing : -1;
+    this._blackKing = this._blackKing !== offset ? this._blackKing : -1;
+    this.updated();
   }
 
-  getHistory(): Move[] {
-    return this.history.map<Move>(moveData => {
-      const { restoreFEN, x, y, ...move } = moveData;
-      return move as Move;
-    });
+  private updated() {
+    this._checked = this.isInCheck(this._turn);
+    this._gameover = this.moves({ color: this._turn }).length === 0;
   }
 
   undo(): Move | undefined {
-    const move = this.history.pop();
+    const move = this._history.pop();
     if (!move) return;
     if (!move.restoreFEN) throw new Error('History entry is missing restore point.');
     this.restoreFen(move.restoreFEN);
@@ -269,10 +322,11 @@ export class Chess {
   }
 
   move(move: Move | string): Move {
-    if (typeof move === 'string') {
+    if (typeof move === STRING) {
       return this.moveToSAN(move as string);
     }
-    else if (move.from && move.to) {
+    move = move as Move;
+    if (move.from && move.to) {
       return this.performMove(move, true);
     }
     else if (move.san) {
@@ -284,19 +338,19 @@ export class Chess {
   }
 
   private moveToSAN(san: string) {
-    const movesValid = this.moves({ color: this.turn });
+    const movesValid = this.moves({ color: this._turn });
     // TODO: Need to integrate a full SAN parser here:
     const findSan = san.trim()
-      .replace(/=[RNB]/, '=Q') //we only produce queen promotions (e8=Q)
-      .replace(/(([\!\?]+)|$\d{1,3})+$/, '') //remove any trailing annotations
+      .replace(PATTERN_PROMOTE_RNB, '=Q') //we only produce queen promotions (e8=Q)
+      .replace(PATTERN_ANNOTATION, EMPTY_STRING) //remove any trailing annotations
       ;
-    const found = movesValid.filter(m => findSan === m.san && m.color === this.turn);
+    const found = movesValid.filter(m => findSan === m.san && m.color === this._turn);
     if (found.length !== 1) {
       throw new Error(`The SAN ${san} is not valid.`);
     }
     const [move] = found;
     if (move.promotion) {
-      const match = san.match(/=([QRNB])/);
+      const match = san.match(PATTERN_PROMOTE_TYPE);
       if (match) move.promotion = match[1];
     }
     return this.performMove(move, false);
@@ -304,8 +358,8 @@ export class Chess {
 
   private performMove(move: Move, validate: boolean): Move {
     if (validate) {
-      const movesValid = this.moves({ square: move.from, color: this.turn })
-        .filter(m => m.from === move.from && m.to === move.to && m.color === this.turn);
+      const movesValid = this.moves({ square: move.from, color: this._turn })
+        .filter(m => m.from === move.from && m.to === move.to && m.color === this._turn);
       if (movesValid.length !== 1) {
         throw new Error(`Move from ${move.from} to ${move.to} is not valid.`);
       }
@@ -321,47 +375,47 @@ export class Chess {
     const sourceOffset = indexToOffset(sourceIndex);
     const targetIndex = INDEXES[move.to];
     const targetOffset = indexToOffset(targetIndex);
-    const movingPiece = this.board[sourceIndex];
+    const movingPiece = this._board[sourceIndex];
 
     // Remove the enpass capture
-    if (move.piece === PAWN && move.capture === PAWN && move.enpass) {
+    if (move.piece === PAWN && move.captured === PAWN && move.enpass) {
       const killSquare = {
         y: targetOffset.y > sourceOffset.y ? targetOffset.y - 1 : targetOffset.y + 1,
         x: targetOffset.x
       };
-      const pieceRemoved = this.board[offsetToIndex(killSquare)];
-      if (COLORPIECES[pieceRemoved] !== `${this.turn === 'w' ? 'b' : 'w'}${PAWN}`) {
+      const pieceRemoved = this._board[offsetToIndex(killSquare)];
+      if (COLORPIECES[pieceRemoved] !== `${this._turn === WHITE ? BLACK : WHITE}${PAWN}`) {
         throw new Error(`Invalid enpass capture ${COLORPIECES[pieceRemoved]} at ${indexToSquare(offsetToIndex(killSquare))}.`);
       }
     }
 
     // Move the piece
-    this.board[sourceIndex] = '-';
-    this.board[targetIndex] = movingPiece;
+    this._board[sourceIndex] = NONE;
+    this._board[targetIndex] = movingPiece;
 
     // Revoke castle rights...
     if (movingPiece === WKING) {
-      this.whiteKing = targetIndex;
-      this.castles = (this.castles || '').replace(/[A-Z]/g, '');
+      this._whiteKing = targetIndex;
+      this._castles = (this._castles || EMPTY_STRING).replace(PATTERN_UPPER_CASE, EMPTY_STRING);
     }
     else if (movingPiece === BKING) {
-      this.blackKing = targetIndex;
-      this.castles = (this.castles || '').replace(/[a-z]/g, '');
+      this._blackKing = targetIndex;
+      this._castles = (this._castles || EMPTY_STRING).replace(PATTERN_LOWER_CASE, EMPTY_STRING);
     }
 
-    if (movingPiece.toLowerCase() === ROOK && this.castles && this.castles !== '-') {
-      const [fromRank, fromFile] = move.from.split('');
-      const startFile = this.turn === 'w' ? '1' : String.fromCharCode(letter0 + BOARD_HEIGHT);
-      const valid = this.castles;
+    if (movingPiece.toLowerCase() === ROOK && this._castles && this._castles !== NONE) {
+      const [fromRank, fromFile] = move.from.split(EMPTY_STRING);
+      const startFile = this._turn === WHITE ? '1' : String.fromCharCode(letter0Code + BOARD_HEIGHT);
+      const valid = this._castles;
       if (startFile === fromFile) {
-        for (const ch of this.castles) {
-          if ((this.turn === 'w' && ch >= 'A' && ch <= 'Z') || (this.turn !== 'w' && ch >= 'a' && ch <= 'z')) {
+        for (const ch of this._castles) {
+          if (isPieceColor(ch, this._turn)) {
             let test = ch.toLowerCase();
             if (BOARD_WIDTH > 10) { /* we can't use KQkq with 12 or wider board */ }
-            else if (test === 'k') test = String.fromCharCode(lowerA + BOARD_WIDTH);
-            else if (test === 'q') test = 'a';
+            else if (test === KING) test = String.fromCharCode(lowerACode + BOARD_WIDTH);
+            else if (test === QUEEN) test = lowerA;
             if (test === fromRank) {
-              this.castles = this.castles.replace(ch, '');
+              this._castles = this._castles.replace(ch, EMPTY_STRING);
               break;
             }
           }
@@ -370,11 +424,11 @@ export class Chess {
     }
 
     // new En passant?
-    this.enpass = -1;
+    this._enpass = -1;
     if (move.piece === PAWN) {
       const delta = deltaOffsets(sourceOffset, targetOffset);
       if (delta.y === 2) {
-        this.enpass = offsetToIndex({
+        this._enpass = offsetToIndex({
           x: sourceOffset.x,
           y: sourceOffset.y + (targetOffset.y > sourceOffset.y ? 1 : -1)
         });
@@ -382,16 +436,17 @@ export class Chess {
     }
 
     // Clocks and history
-    this.halfmoveClock = (move.capture || move.piece === PAWN) ? 0 : this.halfmoveClock + 1;
-    if (this.turn === 'w') {
-      this.turn = 'b';
+    this._halfmoveClock = (move.captured || move.piece === PAWN) ? 0 : this._halfmoveClock + 1;
+    if (this._turn === WHITE) {
+      this._turn = BLACK;
     }
     else {
-      this.turn = 'w';
-      this.moveNumber++;
+      this._turn = WHITE;
+      this._moveNumber++;
     }
 
-    this.history.push(moveData);
+    this._history.push(moveData);
+    this.updated();
     return { ...moveData } as Move;
   }
 
@@ -401,11 +456,11 @@ export class Chess {
       ...targetOffset
     } as MoveData;
 
-    const occupied = this.board[offsetToIndex(targetOffset)];
+    const occupied = this._board[offsetToIndex(targetOffset)];
     if (occupied in COLORPIECES) {
       const occupiedColor = COLORPIECES[occupied][0];
       if (occupiedColor === color) return;
-      result.capture = occupied.toLowerCase();
+      result.captured = occupied.toLowerCase();
     }
     return result as any;
   }
@@ -426,22 +481,22 @@ export class Chess {
         if (!move) break;
 
         let condition = false;
-        if (mv.when === 'start&empty' && !move.capture) {
-          if (color === 'w') {
+        if (mv.when === WHEN_START_AND_EMPTY && !move.captured) {
+          if (color === WHITE) {
             const before = this.canMoveTo({ x: targetOffset.x, y: startOffset.y - 1 }, color);
-            condition = startOffset.y === 6 && !!before && !before.capture;
+            condition = startOffset.y === 6 && !!before && !before.captured;
           }
           else {
             const before = this.canMoveTo({ x: targetOffset.x, y: startOffset.y + 1 }, color);
-            condition = startOffset.y === 1 && !!before && !before.capture;
+            condition = startOffset.y === 1 && !!before && !before.captured;
           }
         }
-        else if (mv.when === 'empty' && !move.capture) { condition = true; }
-        else if (mv.when === 'attack') {
-          if (move.capture) condition = true;
-          else if (piece === PAWN && offsetToIndex(targetOffset) === this.enpass) {
+        else if (mv.when === WHEN_EMPTY && !move.captured) { condition = true; }
+        else if (mv.when === WHEN_ATTACKING) {
+          if (move.captured) condition = true;
+          else if (piece === PAWN && offsetToIndex(targetOffset) === this._enpass) {
             condition = true;
-            move.capture = PAWN;
+            move.captured = PAWN;
             move.enpass = true;
           }
         }
@@ -449,7 +504,7 @@ export class Chess {
         if (condition) {
           targets.push(move);
         }
-        if (move.capture || !mv.repeat) break;
+        if (move.captured || !mv.repeat) break;
       }
     }
 
@@ -462,8 +517,8 @@ export class Chess {
   }
 
   private getMovesFrom(squareIx: number): MoveData[] {
-    const boardPiece = this.board[squareIx];
-    if (typeof boardPiece !== 'string' || boardPiece === '-') {
+    const boardPiece = this._board[squareIx];
+    if (typeof boardPiece !== STRING || boardPiece === NONE) {
       return EMPTY_ARRAY;
     }
 
@@ -484,30 +539,30 @@ export class Chess {
   private isSquareAttacked(squareIx: number, color: Color): MoveData[] {
     const attacks = [
       ...this.getMovesBySquare(squareIx, color, QUEEN)
-        .filter(m => m.capture && m.capture !== KNIGHT),
+        .filter(m => m.captured && m.captured !== KNIGHT),
       ...this.getMovesBySquare(squareIx, color, KNIGHT)
-        .filter(m => m.capture === KNIGHT)
+        .filter(m => m.captured === KNIGHT)
     ];
 
     const startOffset = indexToOffset(squareIx);
     return attacks.filter(move => {
-      if (move.capture === KING) {
+      if (move.captured === KING) {
         const dist = deltaOffsets(startOffset, move);
         return dist.x <= 1 && dist.y <= 1;
       }
-      if (move.capture === PAWN) {
-        if (color === 'w') {
+      if (move.captured === PAWN) {
+        if (color === WHITE) {
           return startOffset.y === move.y + 1 && 1 === Math.abs(startOffset.x - move.x);
         }
         else {
           return startOffset.y === move.y - 1 && 1 === Math.abs(startOffset.x - move.x);
         }
       }
-      if (move.capture === BISHOP) {
+      if (move.captured === BISHOP) {
         const dist = deltaOffsets(startOffset, move);
         return dist.x === dist.y;
       }
-      if (move.capture === ROOK) {
+      if (move.captured === ROOK) {
         const dist = deltaOffsets(startOffset, move);
         return dist.x === 0 || dist.y === 0;
       }
@@ -516,7 +571,7 @@ export class Chess {
     });
   }
 
-  moves(options?: { square?: string, color?: Color }): Move[] {
+  moves(options?: { square?: string, color?: Color, verbose?: boolean }): Move[] {
     options = options || {};
     const { square } = options;
     if (square && !(square in INDEXES)) {
@@ -527,11 +582,10 @@ export class Chess {
     }
     else {
       const result: MoveData[] = [];
-      const color = options.color || this.turn;
+      const color = options.color || this._turn;
       for (let squareIx = 0; squareIx < BOARD_SIZE; squareIx++) {
-        const boardPiece = this.board[squareIx];
-        if ((color === 'w' && boardPiece >= 'A' && boardPiece <= 'Z') ||
-          (color !== 'w' && boardPiece >= 'a' && boardPiece <= 'z')) {
+        const boardPiece = this._board[squareIx];
+        if (isPieceColor(boardPiece, color)) {
           result.push(...this.getMoves(squareIx));
         }
       }
@@ -544,31 +598,31 @@ export class Chess {
     const possible = this.getMovesFrom(squareIx);
     if (possible.length === 0) return result;
 
-    const movingPiece = this.board[squareIx];
+    const movingPiece = this._board[squareIx];
     const colorPiece = COLORPIECES[movingPiece];
     const color = colorPiece[0] as Color;
-    const opponentColor = color === 'w' ? 'b' : 'w';
+    const opponentColor = color === WHITE ? BLACK : WHITE;
     const piece = colorPiece[1];
-    const { whiteKing, blackKing } = this;
+    const { _whiteKing, _blackKing } = this;
 
     const sans: any = {};
     const fixSans: string[] = [];
 
     try {
-      this.board[squareIx] = '-';
+      this._board[squareIx] = NONE;
       for (const move of possible) {
         const targetIx = offsetToIndex(move);
-        const saved = this.board[targetIx];
+        const saved = this._board[targetIx];
         try {
-          this.board[targetIx] = movingPiece;
-          if (movingPiece === WKING) { this.whiteKing = targetIx; }
-          else if (movingPiece === BKING) { this.blackKing = targetIx; }
+          this._board[targetIx] = movingPiece;
+          if (movingPiece === WKING) { this._whiteKing = targetIx; }
+          else if (movingPiece === BKING) { this._blackKing = targetIx; }
 
           if (!this.isInCheck(color)) {
             if (this.isInCheck(opponentColor)) {
-              move.check = '+';
+              move.check = PLUS;
               if (this.isCheckmate(opponentColor)) {
-                move.check = '#';
+                move.check = HASH;
               }
             }
             if (move.piece === PAWN && (move.y === 0 || move.y === BOARD_HEIGHT - 1)) {
@@ -583,14 +637,14 @@ export class Chess {
           }
         }
         finally {
-          this.board[targetIx] = saved;
+          this._board[targetIx] = saved;
         }
       }
     }
     finally {
-      this.board[squareIx] = movingPiece;
-      this.whiteKing = whiteKing;
-      this.blackKing = blackKing;
+      this._board[squareIx] = movingPiece;
+      this._whiteKing = _whiteKing;
+      this._blackKing = _blackKing;
     }
 
     for (const fixSan of fixSans) {
@@ -603,14 +657,57 @@ export class Chess {
     return result;
   }
 
-  isInCheck(color: Color) {
-    const kingSquareIx = color === 'w' ? this.whiteKing : this.blackKing;
-    return this.isSquareAttacked(kingSquareIx, color).length > 0;
+  insufficientMaterial() { return false; } // TODO
+
+  isInCheck(color?: Color) {
+    if (!color || color === this._turn) {
+      return this._checked;
+    }
+    const kingSquareIx = (color || this._turn) === WHITE ? this._whiteKing : this._blackKing;
+    return this.isSquareAttacked(kingSquareIx, (color || this._turn)).length > 0;
   }
 
   isCheckmate(color?: Color) {
-    return this.isInCheck(color || this.turn) && this.moves({ color: color || this.turn }).length === 0;
+    if (!color || color === this._turn) {
+      return this._checked && this._gameover;
+    }
+    return this.isInCheck(color || this._turn) && this.moves({ color: color || this._turn }).length === 0;
   }
+
+  isStalemate(color?: Color) {
+    if (!color || color === this._turn) {
+      return !this._checked && this._gameover;
+    }
+    return !this.isInCheck(color || this._turn) && this.moves({ color: color || this._turn }).length === 0;
+  }
+
+  isDraw() {
+    return this._halfmoveClock >= 100 ||
+      this.insufficientMaterial() ||
+      this.isStalemate();
+  }
+
+  isGameover() {
+    return this._halfmoveClock >= 100 ||
+      this.insufficientMaterial() ||
+      this._gameover;
+  }
+
+  // NOTE: The following are only for compatibility with chess.js api:
+  /** @deprecated */
+  readonly game_over = () => this.isGameover();
+  /** @deprecated */
+  readonly in_check = () => this.isInCheck();
+  /** @deprecated */
+  readonly in_checkmate = () => this.isCheckmate();
+  /** @deprecated */
+  readonly in_stalemate = () => this.isStalemate();
+  /** @deprecated */
+  readonly in_draw = () => this.isDraw();
+  /** @deprecated */
+  readonly insufficient_material = () => this.insufficientMaterial();
+  /** @deprecated */
+  readonly in_threefold_repetition = () => false;
 
   // 3. Castle moves
   // 4. En passant

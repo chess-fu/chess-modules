@@ -17,12 +17,13 @@
 		"chess-fu",
 		"chess"
 	],
-	"main": "dist/chess-game.min.js",
+	"main": "dist/src/chess.js",
 	"types": "dist/types/chess.d.ts",
 	"files": [
 		"readme.md",
 		"dist/chess-game.min.js",
-		"dist/types/chess.d.ts"
+		"dist/types/chess.d.ts",
+		"dist/types/chessMoves.d.ts"
 	],
 	"scripts": {
 		"prebuild": "../../node_modules/.bin/rimraf ./dist",

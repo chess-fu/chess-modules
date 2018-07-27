@@ -63,7 +63,7 @@ describe('PgnDataCursor(Moves)', function () {
     assert.deepEqual(move, {
       piece: 'Q',
       from: 'd4',
-      capture: false,
+      captured: false,
       to: 'd8',
       check: '+',
       annotations: '!!',
@@ -189,7 +189,7 @@ describe('PgnDataCursor(Moves)', function () {
     assert.deepEqual(cursor.readMoveText(), {
       piece: 'P',
       from: 'e',
-      capture: true,
+      captured: true,
       to: 'd',
       raw: 'exde.p.',
       san: 'exd'

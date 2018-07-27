@@ -69,7 +69,7 @@ describe('PgnParser', function () {
     assert.equal(moves[8].result, '*');
     assert.deepEqual(moves[7], {
       piece: 'B',
-      capture: true,
+      captured: true,
       to: 'f3',
       raw: 'Bxf3',
       san: 'Bxf3',

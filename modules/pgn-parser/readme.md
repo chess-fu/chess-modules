@@ -83,7 +83,7 @@ Basic Usage:
 - `nag: string` The NAG string, $ followed by a number 
 - `rav: MoveHistory[]` The RAV alternative play 
 - `check: string` The move check or mate indicator 
-- `capture: boolean` True if this was a capture 
+- `captured: boolean` True if this was a capture 
 - `promotion: string` Promotion type: Q, R, N, or B 
 - `annotations: string` Annotations like !, ?, !?, etc 
 - `comments: string[]` Comments encountered 

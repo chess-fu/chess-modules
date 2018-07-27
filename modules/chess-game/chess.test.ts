@@ -28,7 +28,7 @@ describe('chess', function () {
     assert.equal(move.piece, 'k');
     assert.equal(move.from, 'c8');
     assert.equal(move.to, 'b8');
-    assert.equal(move.capture, 'q');
+    assert.equal(move.captured, 'q');
     assert.equal(move.san, 'Kxb8');
   });
 
@@ -70,7 +70,7 @@ describe('chess', function () {
     assert.equal(mates[0].san, 'Qa8#');
   });
 
-  it.only('will play SAN moves for each piece', function () {
+  it('will play SAN moves for each piece', function () {
     const game = new Chess();
     game.load();
     //tslint:disable-next-line
@@ -89,5 +89,16 @@ describe('chess', function () {
   it('should check move Rd8+', function () {
     const game = new Chess('3r2kr/ppp4p/8/4b3/P1N4P/2P4b/1P4q1/n2K4 b - - 3 24');
     console.log(game.getAttacks('d1', 'w'));
+  });
+
+  it.only('perf test', function () {
+    const game = new Chess();
+    game.load();
+    console.time();
+    let count = 1000;
+    while (--count) {
+      game.isGameover();
+    }
+    console.timeEnd();
   });
 });

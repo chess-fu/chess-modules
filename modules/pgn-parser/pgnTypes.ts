@@ -30,7 +30,7 @@ export interface MoveHistory {
   /** The move check or mate indicator */
   check?: string;
   /** True if this was a capture */
-  capture?: boolean;
+  captured?: boolean;
   /** Promotion type: Q, R, N, or B */
   promotion?: string;
   /** Annotations like !, ?, !?, etc */

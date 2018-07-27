@@ -10,14 +10,28 @@ export interface MoveType extends Offset {
   readonly when?: string;
 }
 
+export const WHEN_START_AND_EMPTY = 'ps';
+export const WHEN_EMPTY = 'e';
+export const WHEN_ATTACKING = 'a';
+
 const MoveTable: { [key: string]: MoveType[] } = {
-  wp: [{ x: 0, y: -1, when: 'empty' }, { x: 0, y: -2, when: 'start&empty' }, { x: 1, y: -1, when: 'attack' }, { x: -1, y: -1, when: 'attack' }],
-  bp: [{ x: 0, y: 1, when: 'empty' }, { x: 0, y: 2, when: 'start&empty' }, { x: 1, y: 1, when: 'attack' }, { x: -1, y: 1, when: 'attack' }],
+  wp: [
+    { x: 0, y: -1, when: WHEN_EMPTY },
+    { x: 0, y: -2, when: WHEN_START_AND_EMPTY },
+    { x: 1, y: -1, when: WHEN_ATTACKING },
+    { x: -1, y: -1, when: WHEN_ATTACKING }
+  ],
+  bp: [
+    { x: 0, y: 1, when: WHEN_EMPTY },
+    { x: 0, y: 2, when: WHEN_START_AND_EMPTY },
+    { x: 1, y: 1, when: WHEN_ATTACKING },
+    { x: -1, y: 1, when: WHEN_ATTACKING }
+  ],
   r: [{ x: 0, y: 1, rotate: true, repeat: true }],
   n: [{ x: 2, y: 1, rotate: true }, { x: 1, y: 2, rotate: true }],
   b: [{ x: 1, y: 1, rotate: true, repeat: true }],
   q: [{ x: 0, y: 1, rotate: true, repeat: true }, { x: 1, y: 1, rotate: true, repeat: true }],
-  k: [{ x: 0, y: 1, rotate: true }, { x: 1, y: 1, rotate: true }, { x: 0, y: 0, when: 'castle' }],
+  k: [{ x: 0, y: 1, rotate: true }, { x: 1, y: 1, rotate: true }],
 };
 
 function rotate90(moves: MoveType): MoveType {

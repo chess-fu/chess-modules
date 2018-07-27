@@ -357,7 +357,7 @@ export class PgnDataCursor {
           move.san = '';
         }
         move.san += move.from || '';
-        move.san += move.capture ? 'x' : '';
+        move.san += move.captured ? 'x' : '';
         move.san += move.to || '';
         move.san += move.promotion ? ('=' + move.promotion) : '';
         move.san += move.check === '+' ? '+' : (move.check ? '#' : '');
@@ -407,7 +407,7 @@ export class PgnDataCursor {
       }
       delete move.to;
       if (next === '-' || next === ':' || next === 'x') {
-        move.capture = (next === ':' || next === 'x');
+        move.captured = (next === ':' || next === 'x');
         this.read();
         next = this.peek();
       }
