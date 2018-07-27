@@ -25,11 +25,7 @@
 		"test:mocha": "./node_modules/.bin/mocha ./modules/**/*.test.ts",
 		"test:cov": "./node_modules/.bin/nyc ./node_modules/.bin/mocha ./modules/**/*.test.ts",
 		"build": "run-s build:*",
-		"build:tsc": "tsc -p tsconfig.json",
-		"make:fen-parser": "cd modules/fen-parser && npm run build",
-		"prerelease": "npm version patch && npm run build",
-		"release": "npm publish -tag latest --access public",
-		"postrelease": "git push"
+		"build:tsc": "tsc -p tsconfig.json"
 	},
 	"dependencies": {},
 	"devDependencies": {

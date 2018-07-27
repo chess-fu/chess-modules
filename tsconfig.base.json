@@ -20,7 +20,7 @@
 		"noImplicitAny": true,
 		"removeComments": true,
 		"strictNullChecks": true,
-		"noUnusedLocals": true,
+		"noUnusedLocals": false,
 		"suppressImplicitAnyIndexErrors": true,
 		"forceConsistentCasingInFileNames": true,
 		"noFallthroughCasesInSwitch": true,

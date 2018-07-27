@@ -220,7 +220,7 @@ describe('PgnParser', function () {
         return move;
       }
       catch (ex) {
-        console.log(`${test}: ${ex.message}`);
+        console.error(`${test}: ${ex.message}`);
         throw ex;
       }
     });
@@ -228,7 +228,7 @@ describe('PgnParser', function () {
     // The move number is excluded, thus...
     const fail = results.filter(m => m.test.indexOf(m.raw || '~not~found~') < 0);
     if (fail.length) {
-      console.log(fail.map(m => m.test));
+      console.error(fail.map(m => m.test));
       assert.fail('One or more tests failed.');
     }
   });

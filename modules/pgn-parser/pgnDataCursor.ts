@@ -513,8 +513,6 @@ export class PgnDataCursor {
     if (move.to && move.to.length) {
       return move;
     }
-
-    // console.log(`bad move = ${JSON.stringify(move)}`);
     return null;
   }
 

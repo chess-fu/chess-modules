@@ -1,8 +1,9 @@
 .nyc_output/
 coverage/
-node_modules/
+/**/node_modules/
 **/dist/
 *.orig
 *.log
 *.tgz
 /modules/pgn-parser/test-data
+/modules/**/package-lock.json
