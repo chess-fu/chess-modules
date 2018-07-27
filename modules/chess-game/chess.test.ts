@@ -20,8 +20,7 @@ describe('chess', function () {
     const game = new Chess();
     game.load('1Qkr3r/p1ppqpp1/1p5p/4P3/8/P2BB3/1P1b1PPP/R4RK1 b - - 1 17');
 
-    assert.isTrue(game.isInCheck('b'));
-    assert.isFalse(game.isInCheck('w'));
+    assert.isTrue(game.isInCheck());
 
     const [move, ...other] = game.moves();
     assert.equal(other.length, 0, 'Expected only 1 valid move c8-b8');
@@ -36,9 +35,8 @@ describe('chess', function () {
     const game = new Chess();
     game.load('Q1kr3r/p1ppqpp1/1p5p/4P3/8/P2BB3/1P1b1PPP/R4RK1 b - - 1 17');
 
-    assert.isFalse(game.isInCheck('w'));
-    assert.isTrue(game.isInCheck('b'));
-    assert.isTrue(game.isCheckmate('b'), 'isCheckmate should be true');
+    assert.isTrue(game.isInCheck());
+    assert.isTrue(game.isCheckmate(), 'isCheckmate should be true');
 
     const moves = game.moves();
     assert.equal(moves.length, 0, 'Expected a checkmate');
@@ -48,8 +46,7 @@ describe('chess', function () {
     const game = new Chess();
     game.load('2kr3r/p1ppqpp1/1p5p/4P3/8/P2BBQ2/1P1b1PPP/R4RK1 w - - 0 17');
 
-    assert.isFalse(game.isInCheck('w'));
-    assert.isFalse(game.isInCheck('b'));
+    assert.isFalse(game.isInCheck());
 
     const moves = game.moves();
     assert.equal(moves.length, 50, 'Should be 50 valid moves');
@@ -83,22 +80,28 @@ describe('chess', function () {
     }
     // result:
     assert.equal(game.fen(), '6kr/p1p4p/3r4/P1p1b3/7P/7b/3q4/n3K3 w - - 1 30');
-    assert.isTrue(game.isCheckmate('w'));
+    assert.isTrue(game.isCheckmate());
   });
 
-  it('should check move Rd8+', function () {
-    const game = new Chess('3r2kr/ppp4p/8/4b3/P1N4P/2P4b/1P4q1/n2K4 b - - 3 24');
-    console.log(game.getAttacks('d1', 'w'));
-  });
-
-  it.only('perf test', function () {
+  it('perf testForCheck', function () {
     const game = new Chess();
     game.load();
-    console.time();
+    console.time('testForCheck');
     let count = 1000;
     while (--count) {
-      game.isGameover();
+      (game as any).testForCheck();
     }
-    console.timeEnd();
+    console.timeEnd('testForCheck');
+  });
+
+  it('perf hasValidMoves', function () {
+    const game = new Chess();
+    game.load();
+    console.time('hasValidMoves');
+    let count = 1000;
+    while (--count) {
+      (game as any).hasValidMoves('w');
+    }
+    console.timeEnd('hasValidMoves');
   });
 });

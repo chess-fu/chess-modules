@@ -22,6 +22,17 @@ interface MoveData extends Move, Offset {
   restoreFEN?: string;
 }
 
+interface MoveOptions {
+  square?: string;
+  color?: Color;
+  verbose?: boolean;
+}
+type MoveOptionsINT = MoveOptions & {
+  squareIx: number,
+  exists?: boolean;
+  simple?: boolean;
+};
+
 const lowerACode = 'a'.charCodeAt(0);
 const letter0Code = '0'.charCodeAt(0);
 
@@ -172,7 +183,7 @@ export class Chess {
   private _blackKing: number;
   private _castles: string;
   private _checked: boolean;
-  private _gameover: boolean;
+  private _noValidMoves: boolean;
 
   constructor(fen?: string) {
     if (fen) {
@@ -309,8 +320,8 @@ export class Chess {
   }
 
   private updated() {
-    this._checked = this.isInCheck(this._turn);
-    this._gameover = this.moves({ color: this._turn }).length === 0;
+    this._checked = this.testForCheck(this._turn);
+    this._noValidMoves = !this.hasValidMoves(this._turn);
   }
 
   undo(): Move | undefined {
@@ -465,7 +476,8 @@ export class Chess {
     return result as any;
   }
 
-  private getMovesBySquare(squareIx: number, color: Color, piece: string): MoveData[] {
+  private getMovesBySquare(options: MoveOptionsINT, color: Color, piece: string): MoveData[] {
+    const { squareIx, simple } = options;
     const startOffset = indexToOffset(squareIx);
     const targets: MoveData[] = [];
     let moveTypes = MoveTable[piece];
@@ -502,21 +514,26 @@ export class Chess {
         }
         else if (!mv.when) { condition = true; }
         if (condition) {
+          move.color = color;
+          move.piece = piece;
           targets.push(move);
         }
         if (move.captured || !mv.repeat) break;
       }
     }
 
+    if (simple) {
+      return targets;
+    }
     return targets.map(t => ({
-      color, piece,
       from: indexToSquare(squareIx),
       to: indexToSquare(offsetToIndex(t)),
       ...t
     }));
   }
 
-  private getMovesFrom(squareIx: number): MoveData[] {
+  private getMovesFrom(options: MoveOptionsINT): MoveData[] {
+    const { squareIx } = options;
     const boardPiece = this._board[squareIx];
     if (typeof boardPiece !== STRING || boardPiece === NONE) {
       return EMPTY_ARRAY;
@@ -526,59 +543,63 @@ export class Chess {
     const color = colorPiece[0] as Color;
     const piece = colorPiece[1];
 
-    return this.getMovesBySquare(squareIx, color, piece);
+    return this.getMovesBySquare(options, color, piece);
   }
 
-  getAttacks(square: string, targetColor: Color): Move[] {
-    if (!(square in INDEXES)) {
-      throw new Error(`Invalid square identifier: "${square}"`);
+
+  isValidAttack(move: MoveData, offset: Offset, color: Color) {
+    if (move.captured === KING) {
+      const dist = deltaOffsets(offset, move);
+      return dist.x <= 1 && dist.y <= 1;
     }
-    return this.isSquareAttacked(INDEXES[square], targetColor);
+    if (move.captured === PAWN) {
+      if (color === WHITE) {
+        return offset.y === move.y + 1 && 1 === Math.abs(offset.x - move.x);
+      }
+      else {
+        return offset.y === move.y - 1 && 1 === Math.abs(offset.x - move.x);
+      }
+    }
+    if (move.captured === BISHOP) {
+      const dist = deltaOffsets(offset, move);
+      return dist.x === dist.y;
+    }
+    if (move.captured === ROOK) {
+      const dist = deltaOffsets(offset, move);
+      return dist.x === 0 || dist.y === 0;
+    }
+    //Leaves KNIGHT and QUEEN, which if present are valid.
+    return true;
   }
 
-  private isSquareAttacked(squareIx: number, color: Color): MoveData[] {
-    const attacks = [
-      ...this.getMovesBySquare(squareIx, color, QUEEN)
-        .filter(m => m.captured && m.captured !== KNIGHT),
-      ...this.getMovesBySquare(squareIx, color, KNIGHT)
-        .filter(m => m.captured === KNIGHT)
-    ];
-
+  private isSquareAttacked(squareIx: number, color: Color): boolean {
     const startOffset = indexToOffset(squareIx);
-    return attacks.filter(move => {
-      if (move.captured === KING) {
-        const dist = deltaOffsets(startOffset, move);
-        return dist.x <= 1 && dist.y <= 1;
+    const lineAttacks = this.getMovesBySquare({ squareIx, simple: true }, color, QUEEN);
+    for (const move of lineAttacks) {
+      if (move.captured && move.captured !== KNIGHT && this.isValidAttack(move, startOffset, color)) {
+        return true;
       }
-      if (move.captured === PAWN) {
-        if (color === WHITE) {
-          return startOffset.y === move.y + 1 && 1 === Math.abs(startOffset.x - move.x);
-        }
-        else {
-          return startOffset.y === move.y - 1 && 1 === Math.abs(startOffset.x - move.x);
-        }
+    }
+    const knightAttacks = this.getMovesBySquare({ squareIx, simple: true }, color, KNIGHT);
+    for (const move of knightAttacks) {
+      if (move.captured === KNIGHT && this.isValidAttack(move, startOffset, color)) {
+        return true;
       }
-      if (move.captured === BISHOP) {
-        const dist = deltaOffsets(startOffset, move);
-        return dist.x === dist.y;
-      }
-      if (move.captured === ROOK) {
-        const dist = deltaOffsets(startOffset, move);
-        return dist.x === 0 || dist.y === 0;
-      }
-      //Leaves KNIGHT and QUEEN, which if present are valid.
-      return true;
-    });
+    }
+
+    return false;
   }
 
-  moves(options?: { square?: string, color?: Color, verbose?: boolean }): Move[] {
+  moves(options?: MoveOptions): Move[] {
     options = options || {};
-    const { square } = options;
+    const { square, exists } = options as MoveOptionsINT;
     if (square && !(square in INDEXES)) {
       throw new Error(`Invalid square identifier: "${square}"`);
     }
     if (square) {
-      return this.getMoves(INDEXES[square]);
+      const result: MoveData[] = [];
+      this.getMoves(result, { squareIx: INDEXES[square], ...options });
+      return result;
     }
     else {
       const result: MoveData[] = [];
@@ -586,17 +607,20 @@ export class Chess {
       for (let squareIx = 0; squareIx < BOARD_SIZE; squareIx++) {
         const boardPiece = this._board[squareIx];
         if (isPieceColor(boardPiece, color)) {
-          result.push(...this.getMoves(squareIx));
+          this.getMoves(result, { squareIx, ...options });
+          if (exists && result.length) {
+            return result;
+          }
         }
       }
       return result;
     }
   }
 
-  private getMoves(squareIx: number): MoveData[] {
-    const result: MoveData[] = [];
-    const possible = this.getMovesFrom(squareIx);
-    if (possible.length === 0) return result;
+  private getMoves(result: MoveData[], options: MoveOptionsINT): void {
+    const { squareIx } = options;
+    const possible = this.getMovesFrom(options);
+    if (possible.length === 0) return;
 
     const movingPiece = this._board[squareIx];
     const colorPiece = COLORPIECES[movingPiece];
@@ -618,13 +642,18 @@ export class Chess {
           if (movingPiece === WKING) { this._whiteKing = targetIx; }
           else if (movingPiece === BKING) { this._blackKing = targetIx; }
 
-          if (!this.isInCheck(color)) {
-            if (this.isInCheck(opponentColor)) {
+          if (!this.testForCheck(color)) {
+            if (this.testForCheck(opponentColor)) {
               move.check = PLUS;
-              if (this.isCheckmate(opponentColor)) {
+              if (!this.hasValidMoves(opponentColor)) {
                 move.check = HASH;
               }
             }
+            if (options.exists) {
+              result.push({} as any);
+              return;
+            }
+
             if (move.piece === PAWN && (move.y === 0 || move.y === BOARD_HEIGHT - 1)) {
               move.promotion = QUEEN;
             }
@@ -653,33 +682,30 @@ export class Chess {
         move.san = buildSAN(move, matching);
       }
     }
+  }
 
-    return result;
+  private testForCheck(color: Color) {
+    const kingSquareIx = color === WHITE ? this._whiteKing : this._blackKing;
+    return this.isSquareAttacked(kingSquareIx, color);
+  }
+
+  private hasValidMoves(color: Color) {
+    return this.moves({ color, exists: true } as MoveOptionsINT).length > 0;
+  }
+
+  isInCheck() {
+    return this._checked;
+  }
+
+  isCheckmate() {
+    return this._checked && this._noValidMoves;
+  }
+
+  isStalemate() {
+    return !this._checked && this._noValidMoves;
   }
 
   insufficientMaterial() { return false; } // TODO
-
-  isInCheck(color?: Color) {
-    if (!color || color === this._turn) {
-      return this._checked;
-    }
-    const kingSquareIx = (color || this._turn) === WHITE ? this._whiteKing : this._blackKing;
-    return this.isSquareAttacked(kingSquareIx, (color || this._turn)).length > 0;
-  }
-
-  isCheckmate(color?: Color) {
-    if (!color || color === this._turn) {
-      return this._checked && this._gameover;
-    }
-    return this.isInCheck(color || this._turn) && this.moves({ color: color || this._turn }).length === 0;
-  }
-
-  isStalemate(color?: Color) {
-    if (!color || color === this._turn) {
-      return !this._checked && this._gameover;
-    }
-    return !this.isInCheck(color || this._turn) && this.moves({ color: color || this._turn }).length === 0;
-  }
 
   isDraw() {
     return this._halfmoveClock >= 100 ||
@@ -690,7 +716,7 @@ export class Chess {
   isGameover() {
     return this._halfmoveClock >= 100 ||
       this.insufficientMaterial() ||
-      this._gameover;
+      this._noValidMoves;
   }
 
   // NOTE: The following are only for compatibility with chess.js api:
