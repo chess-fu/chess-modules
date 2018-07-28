@@ -17,7 +17,7 @@
 		"chess-fu",
 		"chess"
 	],
-	"main": "dist/src/chess.js",
+	"main": "dist/chess-game.min.js",
 	"types": "dist/types/chess.d.ts",
 	"files": [
 		"readme.md",

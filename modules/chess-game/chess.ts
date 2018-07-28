@@ -1,7 +1,4 @@
 import FenParser from '@chess-fu/fen-parser';
-import { MoveTable, Offset, WHEN_START_AND_EMPTY, WHEN_EMPTY, WHEN_ATTACKING } from './chessMoves';
-
-export const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
 export type Color = 'w' | 'b';
 
@@ -32,6 +29,40 @@ type MoveOptionsINT = MoveOptions & {
   exists?: boolean;
   simple?: boolean;
 };
+interface Offset {
+  readonly x: number;
+  readonly y: number;
+}
+
+interface MoveType extends Offset {
+  readonly rotate?: boolean;
+  readonly repeat?: boolean;
+  readonly when?: string;
+}
+
+const WHEN_START_AND_EMPTY = 'ps';
+const WHEN_EMPTY = 'e';
+const WHEN_ATTACKING = 'a';
+
+const MoveTable: { [key: string]: MoveType[] } = {
+  wp: [
+    { x: 0, y: -1, when: WHEN_EMPTY },
+    { x: 0, y: -2, when: WHEN_START_AND_EMPTY },
+    { x: 1, y: -1, when: WHEN_ATTACKING },
+    { x: -1, y: -1, when: WHEN_ATTACKING }
+  ],
+  bp: [
+    { x: 0, y: 1, when: WHEN_EMPTY },
+    { x: 0, y: 2, when: WHEN_START_AND_EMPTY },
+    { x: 1, y: 1, when: WHEN_ATTACKING },
+    { x: -1, y: 1, when: WHEN_ATTACKING }
+  ],
+  r: [{ x: 0, y: 1, rotate: true, repeat: true }],
+  n: [{ x: 2, y: 1, rotate: true }, { x: 1, y: 2, rotate: true }],
+  b: [{ x: 1, y: 1, rotate: true, repeat: true }],
+  q: [{ x: 0, y: 1, rotate: true, repeat: true }, { x: 1, y: 1, rotate: true, repeat: true }],
+  k: [{ x: 0, y: 1, rotate: true }, { x: 1, y: 1, rotate: true }],
+};
 
 const lowerACode = 'a'.charCodeAt(0);
 const letter0Code = '0'.charCodeAt(0);
@@ -59,6 +90,8 @@ const NONE = '-';
 const SLASH = '/';
 const SAN_CAPTURE = 'x';
 
+export const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+
 const NUMBER = 'number';
 const STRING = 'string';
 
@@ -80,27 +113,25 @@ const PATTERN_LOWER_CASE = /[a-z]/g;
 const PATTERN_UPPER_CASE = /[A-Z]/g;
 
 const PIECE_TYPES = 'kqbnrp'.split(EMPTY_STRING);
+const PROMOTIONS = 'qrnb'.split(EMPTY_STRING);
 const PIECES: { [key: string]: string } = {};
 const COLORPIECES: { [key: string]: string } = {};
 
-/** initializer: build static map tables... */
-(function initializer() {
-  // FEN ORDER: a8 ... h1 = 64
-  for (let rank = 0; rank < BOARD_WIDTH; rank++) {
-    for (let file = 0; file < BOARD_WIDTH; file++) {
-      INDEXES[`${String.fromCharCode(lowerACode + file)}${rank + 1}`] = file + (((BOARD_HEIGHT - 1) - rank) * BOARD_WIDTH);
-    }
-  }
+function rotate90(moves: MoveType): MoveType {
+  const { x, y } = moves;
+  return { ...moves, x: -y, y: x };
+}
 
-  for (const piece of PIECE_TYPES) {
-    PIECES[WHITE + piece] = piece.toUpperCase();
-    PIECES[BLACK + piece] = piece.toLowerCase();
-    PIECES[piece.toUpperCase()] = piece.toUpperCase();
-    PIECES[piece.toLowerCase()] = piece.toLowerCase();
-    COLORPIECES[piece.toUpperCase()] = WHITE + piece;
-    COLORPIECES[piece.toLowerCase()] = BLACK + piece;
-  }
-})();
+function expandMoves(moves: MoveType[]) {
+  const rotates = moves.filter(m => m.rotate);
+  const results = [
+    ...moves,
+    ...rotates.map(m => rotate90(m)),
+    ...rotates.map(m => rotate90(rotate90(m))),
+    ...rotates.map(m => rotate90(rotate90(rotate90(m)))),
+  ];
+  return results;
+}
 
 function isPieceColor(boardPiece: string, color: Color) {
   return ((color === WHITE && boardPiece >= upperA && boardPiece <= upperZ) ||
@@ -169,6 +200,30 @@ function buildSAN(move: Move, conflicts?: Move[]) {
   if (move.check) result.push(move.check);
   return result.join(EMPTY_STRING);
 }
+
+/** global initializer: build static map tables... */
+(function initializer() {
+  // FEN ORDER: a8 ... h1 = 64
+  for (let rank = 0; rank < BOARD_WIDTH; rank++) {
+    for (let file = 0; file < BOARD_WIDTH; file++) {
+      INDEXES[`${String.fromCharCode(lowerACode + file)}${rank + 1}`] = file + (((BOARD_HEIGHT - 1) - rank) * BOARD_WIDTH);
+    }
+  }
+
+  for (const piece of PIECE_TYPES) {
+    PIECES[WHITE + piece] = piece.toUpperCase();
+    PIECES[BLACK + piece] = piece.toLowerCase();
+    PIECES[piece.toUpperCase()] = piece.toUpperCase();
+    PIECES[piece.toLowerCase()] = piece.toLowerCase();
+    COLORPIECES[piece.toUpperCase()] = WHITE + piece;
+    COLORPIECES[piece.toLowerCase()] = BLACK + piece;
+  }
+
+  Object.keys(MoveTable)
+    .forEach(key => {
+      MoveTable[key] = expandMoves(MoveTable[key]);
+    });
+})();
 
 export class Chess {
   private _headers: { [key: string]: string };
@@ -381,6 +436,16 @@ export class Chess {
       throw new Error(`Invalid move ${move.from} ${move.to} (off table).`);
     }
 
+    // Pre-validate the promotion piece
+    let { promotion } = move;
+    if (move.piece === PAWN && promotion) {
+      promotion = typeof promotion === STRING ? promotion.toLowerCase() : NONE;
+      if (PROMOTIONS.indexOf(promotion) < 0) {
+        throw new Error(`Invalid promotion piece "${move.promotion}".`);
+      }
+      promotion = move.promotion = this._turn === WHITE ? promotion.toUpperCase() : promotion;
+    }
+
     const moveData = { ...move, restoreFEN: this.fen() } as MoveData;
     const sourceIndex = INDEXES[move.from];
     const sourceOffset = indexToOffset(sourceIndex);
@@ -394,15 +459,20 @@ export class Chess {
         y: targetOffset.y > sourceOffset.y ? targetOffset.y - 1 : targetOffset.y + 1,
         x: targetOffset.x
       };
-      const pieceRemoved = this._board[offsetToIndex(killSquare)];
+      const killIndex = offsetToIndex(killSquare);
+      const pieceRemoved = this._board[killIndex];
       if (COLORPIECES[pieceRemoved] !== `${this._turn === WHITE ? BLACK : WHITE}${PAWN}`) {
         throw new Error(`Invalid enpass capture ${COLORPIECES[pieceRemoved]} at ${indexToSquare(offsetToIndex(killSquare))}.`);
       }
+      this._board[killIndex] = NONE;
     }
 
     // Move the piece
     this._board[sourceIndex] = NONE;
     this._board[targetIndex] = movingPiece;
+    if (move.piece === PAWN && promotion) {
+      this._board[targetIndex] = promotion;
+    }
 
     // Revoke castle rights...
     if (movingPiece === WKING) {
