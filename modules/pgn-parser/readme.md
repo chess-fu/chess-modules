@@ -93,7 +93,7 @@ Basic Usage:
 ### `class PgnGame`
 
 - `readonly headers: HeaderEntry[]` Returns the structured content found in the headers/tag-pairs.
-- `readonly history: MoveHistory[]` Returns the structured move text context.
+- `readonly history: MoveHistory[]` Returns the structured move text content.
 - `headersMap(): { [key: string]: string }` Returns a key-value map of headers as an object.
 - `moves(): MoveHistory[]` Returns the move history excluding any non-move entries.
 

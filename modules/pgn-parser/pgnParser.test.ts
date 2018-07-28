@@ -1,9 +1,36 @@
+/*
+ * ****************************************************************************
+ * Copyright (C) 2018-2018 chess-fu.com
+ * License: MIT
+ * Author: chess-fu.com
+ * Homepage: https://chess-fu.com
+ * Repository: https://github.com/chess-fu/chess-modules
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ *  of this software and associated documentation files (the 'Software'), to 
+ * deal in the Software without restriction, including without limitation the 
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or 
+ * sell copies of the Software, and to permit persons to whom the Software is 
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in 
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ * ****************************************************************************
+ */
 import 'mocha';
 import { assert } from 'chai';
 import { PgnParser } from './pgnParser';
 import { PgnDataCursor } from './pgnDataCursor';
 import { movesToString } from './pgnDataCursor-moves.test';
-import { MoveHistory } from './pgnGame';
+import { MoveHistory } from './pgnTypes';
 import { Hastings1999 } from './pgnDataset.test';
 
 describe('PgnParser', function () {
@@ -178,9 +205,8 @@ describe('PgnParser', function () {
   });
 
   it('parses a move with comments', function () {
-    const cursor = new PgnDataCursor('Qd8 {My comment!}');
     const parser = new PgnParser();
-    const move = parser.parseMove(cursor);
+    const move = parser.parseMove('Qd8 {My comment!}');
     assert.deepEqual(move, {
       piece: 'Q',
       to: 'd8',
@@ -191,16 +217,14 @@ describe('PgnParser', function () {
   });
 
   it('parses a move of ...', function () {
-    const cursor = new PgnDataCursor('...');
     const parser = new PgnParser();
-    const move = parser.parseMove(cursor);
+    const move = parser.parseMove('...');
     assert.deepEqual(move, { raw: '...', to: '...' });
   });
 
   it('parses a move of ....', function () {
-    const cursor = new PgnDataCursor('....');
     const parser = new PgnParser();
-    const move = parser.parseMove(cursor);
+    const move = parser.parseMove('....');
     assert.deepEqual(move, { raw: '...', to: '...' });
   });
 
@@ -214,9 +238,8 @@ describe('PgnParser', function () {
 
     const all = movesToString(movePossibles);
     const results = all.map(test => {
-      const cursor = new PgnDataCursor(test);
       try {
-        const move = { test, ...parser.parseMove(cursor) as (MoveHistory & { test: string }) };
+        const move = { test, ...parser.parseMove(test) as (MoveHistory & { test: string }) };
         return move;
       }
       catch (ex) {

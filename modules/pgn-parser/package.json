@@ -20,11 +20,14 @@
 		"parser",
 		"960"
 	],
-	"main": "dist/pgn-parser.min.js",
+	"main": "dist/src/pgnParser.js",
 	"types": "dist/types/pgnParser.d.ts",
 	"files": [
 		"readme.md",
-		"dist/pgn-parser.min.js",
+		"dist/src/pgnDataCursor.js",
+		"dist/src/pgnGame.js",
+		"dist/src/pgnParser.js",
+		"dist/src/pgnTypes.js",
 		"dist/types/pgnDataCursor.d.ts",
 		"dist/types/pgnGame.d.ts",
 		"dist/types/pgnParser.d.ts",
@@ -34,7 +37,6 @@
 		"prebuild": "../../node_modules/.bin/rimraf ./dist",
 		"build": "../../node_modules/.bin/tsc",
 		"test": "cd ../../ && ./node_modules/.bin/mocha ./modules/pgn-parser/*.test.ts",
-		"postbuild": "../../node_modules/.bin/uglifyjs --config-file ../../uglify-js.json -o ./dist/pgn-parser.min.js  ./dist/src/*.js",
 		"prepack": "npm run build",
 		"release": "npm publish -tag latest --access public"
 	}

@@ -25,47 +25,6 @@
  * IN THE SOFTWARE.
  * ****************************************************************************
  */
-import { HeaderEntry, MoveHistory } from './pgnTypes';
-
-/**
- * PgnGame class represents a pair of headers with a move history
- */
-export class PgnGame {
-  /** @readonly Returns the structured content found in the headers/tag-pairs. */
-  readonly headers: HeaderEntry[];
-  /** @readonly Returns the structured move text content. */
-  readonly history: MoveHistory[];
-
-  /** 
-   * @constructor
-   * Creates an empty game
-   */
-  constructor() {
-    this.headers = [];
-    this.history = [];
-  }
-
-  /**
-   * Builds and returns a key-value map of headers as an object.
-   * @returns {{string: string}} Returns a map of header values.
-   */
-  headersMap(): { [key: string]: string } {
-    const result: { [key: string]: string } = {};
-    for (const header of this.headers) {
-      if (header.name && header.value) {
-        result[header.name] = header.value;
-      }
-    }
-    return result;
-  }
-
-  /**
-   * Filters the move history to only those that represent actual moves.
-   * @returns {MoveHistory[]} Returns filtered set from history.
-   */
-  moves(): MoveHistory[] {
-    return this.history.filter(m => m.san);
-  }
-}
-
-export default PgnGame;
+export { PgnGame } from './pgnGame';
+export { HeaderEntry, MoveHistory } from './pgnTypes';
+export { default, PgnParser } from './pgnParser';
