@@ -1,6 +1,33 @@
+/*
+ * ****************************************************************************
+ * Copyright (C) 2018-2018 chess-fu.com
+ * License: MIT
+ * Author: chess-fu.com
+ * Homepage: https://chess-fu.com
+ * Repository: https://github.com/chess-fu/chess-modules
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ *  of this software and associated documentation files (the 'Software'), to 
+ * deal in the Software without restriction, including without limitation the 
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or 
+ * sell copies of the Software, and to permit persons to whom the Software is 
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in 
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ * ****************************************************************************
+ */
 import 'mocha';
 import { assert } from 'chai';
-import { Chess, START_FEN, Move } from './chess';
+import { default as Chess, START_FEN, Move } from './index';
 
 describe('chess', function () {
   it('constructs with no args', function () {
@@ -84,24 +111,100 @@ describe('chess', function () {
   });
 
   it('perf testForCheck', function () {
+    this.slow(16);
+    this.timeout(20);
     const game = new Chess();
     game.load();
-    console.time('testForCheck');
+    //console.time('testForCheck');
     let count = 1000;
     while (--count) {
       (game as any).testForCheck();
     }
-    console.timeEnd('testForCheck');
+    //console.timeEnd('testForCheck');
   });
 
   it('perf hasValidMoves', function () {
+    this.slow(48);
+    this.timeout(60);
     const game = new Chess();
     game.load();
-    console.time('hasValidMoves');
+    //console.time('hasValidMoves');
     let count = 1000;
     while (--count) {
       (game as any).hasValidMoves('w');
     }
-    console.timeEnd('hasValidMoves');
+    //console.timeEnd('hasValidMoves');
   });
+
+  it('isAutomaticDraw', function () {
+    const game = new Chess('8/KQ6/8/8/8/8/8/8 w - - 0 1');
+    assert.isTrue(game.isAutomaticDraw());
+
+    game.load('8/K7/8/8/8/8/7k/8 w - - 0 1');
+    assert.isTrue(game.isAutomaticDraw());
+
+    game.load('8/KB6/8/8/8/8/7k/8 w - - 0 1');
+    assert.isTrue(game.isAutomaticDraw());
+
+    game.load('8/Kb6/8/8/8/8/7k/8 w - - 0 1');
+    assert.isTrue(game.isAutomaticDraw());
+
+    game.load('8/KN6/8/8/8/8/7k/8 w - - 0 1');
+    assert.isTrue(game.isAutomaticDraw());
+
+    game.load('8/Kn6/8/8/8/8/7k/8 w - - 0 1');
+    assert.isTrue(game.isAutomaticDraw());
+
+    game.load('8/KbB5/8/8/8/8/7k/8 w - - 0 1');
+    assert.isFalse(game.isAutomaticDraw());
+
+    game.load('8/Kb1B4/8/8/8/8/7k/8 w - - 0 1');
+    assert.isTrue(game.isAutomaticDraw());
+  });
+
+  it.only('will castle when available', function () {
+    const game = new Chess('r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1');
+    let castles = game.moves({ square: 'e1' }).filter(m => m.castle);
+    assert.equal(castles.map(m => m.castle).sort().join(','), 'a1,h1');
+
+    game.move('O-O');
+    assert.equal(game.fen(), 'r3k2r/8/8/8/8/8/8/R4RK1 b kq - 1 1');
+
+    castles = game.moves({ square: 'e8' }).filter(m => m.castle);
+    assert.equal(castles.map(m => m.castle).sort().join(','), 'a8');
+
+    game.move('O-O-O');
+    assert.equal(game.fen(), '2kr3r/8/8/8/8/8/8/R4RK1 w - - 2 2');
+
+    game.load('r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 3 3');
+    castles = game.moves({ square: 'e8' }).filter(m => m.castle);
+    assert.equal(castles.map(m => m.castle).sort().join(','), 'a8,h8');
+
+    game.move('O-O');
+    assert.equal(game.fen(), 'r4rk1/8/8/8/8/8/8/R3K2R w KQ - 4 4');
+
+    castles = game.moves({ square: 'e1' }).filter(m => m.castle);
+    assert.equal(castles.map(m => m.castle).sort().join(','), 'a1');
+
+    game.move('O-O-O');
+    assert.equal(game.fen(), 'r4rk1/8/8/8/8/8/8/2KR3R b - - 5 4');
+
+    //Obstructed both
+    game.load('r3k2r/8/8/8/8/8/8/RN2K1NR w KQkq - 6 7');
+    castles = game.moves({ square: 'e1' }).filter(m => m.castle);
+    assert.equal(castles.length, 0);
+
+    //Obstructed queen
+    game.load('r3k2r/8/8/8/8/8/8/RN2K2R w KQkq - 6 7');
+    castles = game.moves({ square: 'e1' }).filter(m => m.castle);
+    assert.equal(castles.length, 1);
+    assert.equal(castles[0].san, 'O-O');
+
+    //Obstructed king
+    game.load('r3k2r/8/8/8/8/8/8/R3K1NR w KQkq - 6 7');
+    castles = game.moves({ square: 'e1' }).filter(m => m.castle);
+    assert.equal(castles.length, 1);
+    assert.equal(castles[0].san, 'O-O-O');
+  });
+
 });

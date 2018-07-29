@@ -1,39 +1,38 @@
 {
-	"name": "@chess-fu/chess-game",
-	"access": "public",
-	"version": "0.1.1",
-	"description": "Chess game logic",
-	"author": "chess-fu.com",
-	"license": "MIT",
-	"homepage": "https://chess-fu.com",
-	"bugs": {
-		"url": "https://github.com/chess-fu/chess-modules"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git@github.com:chess-fu/chess-modules.git"
-	},
-	"keywords": [
-		"chess-fu",
-		"chess"
-	],
-	"main": "dist/chess-game.min.js",
-	"types": "dist/types/chess.d.ts",
-	"files": [
-		"readme.md",
-		"dist/chess-game.min.js",
-		"dist/types/chess.d.ts",
-		"dist/types/chessMoves.d.ts"
-	],
-	"scripts": {
-		"prebuild": "../../node_modules/.bin/rimraf ./dist",
-		"build": "../../node_modules/.bin/tsc",
-		"test": "cd ../../ && ./node_modules/.bin/mocha ./modules/chess-game/*.test.ts",
-		"postbuild": "../../node_modules/.bin/uglifyjs --config-file ../../uglify-js.json -o ./dist/chess-game.min.js  ./dist/src/*.js",
-		"prepack": "npm run build",
-		"release": "npm publish -tag latest --access public"
-	},
-	"dependencies": {
-		"@chess-fu/fen-parser": "^0.1.0"
-	}
+  "name": "@chess-fu/chess-game",
+  "access": "public",
+  "version": "0.1.1",
+  "description": "Chess game logic",
+  "author": "chess-fu.com",
+  "license": "MIT",
+  "homepage": "https://chess-fu.com",
+  "bugs": {
+    "url": "https://github.com/chess-fu/chess-modules"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:chess-fu/chess-modules.git"
+  },
+  "keywords": [
+    "chess-fu",
+    "chess"
+  ],
+  "main": "dist/index.js",
+  "types": "dist/types/chess.d.ts",
+  "files": [
+    "readme.md",
+    "dist/types/chess.d.ts",
+    "dist/types/chessMoves.d.ts"
+  ],
+  "scripts": {
+    "prebuild": "../../node_modules/.bin/rimraf ./dist",
+    "build": "../../node_modules/.bin/tsc",
+    "test": "cd ../../ && ./node_modules/.bin/mocha ./modules/chess-game/*.test.ts",
+    "prepack": "npm run build",
+    "release": "npm publish -tag latest --access public"
+  },
+  "dependencies": {
+    "@chess-fu/fen-parser": "^1.1.1",
+    "@chess-fu/pgn-parser": "^1.1.1"
+  }
 }
