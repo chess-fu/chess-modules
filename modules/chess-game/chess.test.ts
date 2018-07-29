@@ -162,7 +162,7 @@ describe('chess', function () {
     assert.isTrue(game.isAutomaticDraw());
   });
 
-  it.only('will castle when available', function () {
+  it('will castle when available', function () {
     const game = new Chess('r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1');
     let castles = game.moves({ square: 'e1' }).filter(m => m.castle);
     assert.equal(castles.map(m => m.castle).sort().join(','), 'a1,h1');
@@ -205,6 +205,13 @@ describe('chess', function () {
     castles = game.moves({ square: 'e1' }).filter(m => m.castle);
     assert.equal(castles.length, 1);
     assert.equal(castles[0].san, 'O-O-O');
+  });
+
+  it.only('disambiguation between moves', function () {
+    const game = new Chess('1k1r3r/ppp1Qppp/n4n2/5q2/2P1p3/5N2/PP3PPP/RNB2RK1 b - - 2 12');
+    const moves = game.moves().filter(m => m.piece === 'r' && m.to === 'e8');
+    const sanMoves = moves.map(m => m.san).sort().join(',');
+    assert.equal(sanMoves, 'Rde8,Rhe8');
   });
 
 });

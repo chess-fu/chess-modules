@@ -50,6 +50,7 @@ type MoveOptionsINT = MoveOptions & {
   squareIx: number,
   exists?: boolean;
   simple?: boolean;
+  captures?: boolean;
 };
 
 const lowerA = 'a';
@@ -490,7 +491,7 @@ export class ChessGame {
   }
 
   private getMovesBySquare(options: MoveOptionsINT, color: Color, piece: string): MoveData[] {
-    const { squareIx, simple } = options;
+    const { squareIx, simple, captures } = options;
     const startOffset = indexToOffset(squareIx);
     const targets: MoveData[] = [];
     let moveTypes = MoveTable[piece];
@@ -535,16 +536,19 @@ export class ChessGame {
       }
     }
 
+    if (captures) {
+      return targets.filter(m => m.captured);
+    }
+    if (simple) {
+      return targets;
+    }
+
     // Lastly we need to add castle moves...
     if (piece === KING && (this._castles || NONE) !== NONE) {
       const moves = this.getCastleMoves(color);
       for (const move of moves) {
         targets.push(move);
       }
-    }
-
-    if (simple) {
-      return targets;
     }
 
     return targets.map(t => ({
@@ -653,13 +657,13 @@ export class ChessGame {
 
   private isSquareAttacked(squareIx: number, color: Color): boolean {
     const startOffset = indexToOffset(squareIx);
-    const lineAttacks = this.getMovesBySquare({ squareIx, simple: true }, color, QUEEN);
+    const lineAttacks = this.getMovesBySquare({ squareIx, simple: true, captures: true }, color, QUEEN);
     for (const move of lineAttacks) {
       if (move.captured && move.captured !== KNIGHT && this.isValidAttack(move, startOffset, color)) {
         return true;
       }
     }
-    const knightAttacks = this.getMovesBySquare({ squareIx, simple: true }, color, KNIGHT);
+    const knightAttacks = this.getMovesBySquare({ squareIx, simple: true, captures: true }, color, KNIGHT);
     for (const move of knightAttacks) {
       if (move.captured === KNIGHT && this.isValidAttack(move, startOffset, color)) {
         return true;
@@ -708,59 +712,63 @@ export class ChessGame {
     const piece = colorPiece[1];
     const { _whiteKing, _blackKing } = this;
 
-    const sans: any = {};
-    const fixSans: string[] = [];
-
-    try {
+    for (const move of possible) {
+      let isLegal = false;
       this._board[squareIx] = NONE;
-      for (const move of possible) {
-        const targetIx = offsetToIndex(move);
-        const saved = this._board[targetIx];
-        try {
-          this._board[targetIx] = movingPiece;
-          if (movingPiece === WKING) { this._whiteKing = targetIx; }
-          else if (movingPiece === BKING) { this._blackKing = targetIx; }
+      const targetIx = offsetToIndex(move);
+      const saved = this._board[targetIx];
+      try {
+        this._board[targetIx] = movingPiece;
+        if (movingPiece === WKING) { this._whiteKing = targetIx; }
+        else if (movingPiece === BKING) { this._blackKing = targetIx; }
 
-          if (!this.testForCheck(color)) {
-            if (this.testForCheck(opponentColor)) {
-              move.check = PLUS;
-              if (!this.hasValidMoves(opponentColor)) {
-                move.check = HASH;
-              }
+        if (!this.testForCheck(color)) {
+          if (this.testForCheck(opponentColor)) {
+            move.check = PLUS;
+            if (!this.hasValidMoves(opponentColor)) {
+              move.check = HASH;
             }
-            if (options.exists) {
-              result.push({} as any);
-              return;
-            }
-
-            if (move.piece === PAWN && (move.y === 0 || move.y === BOARD_HEIGHT - 1)) {
-              move.promotion = QUEEN;
-            }
-            move.san = buildSAN(move);
-            if (sans[move.san]) fixSans.push(move.san);
-            else sans[move.san] = true;
-
-            const { x, y, ...resultMove } = move;
-            result.push(resultMove as MoveData);
           }
-        }
-        finally {
-          this._board[targetIx] = saved;
+          isLegal = true;
         }
       }
-    }
-    finally {
-      this._board[squareIx] = movingPiece;
-      this._whiteKing = _whiteKing;
-      this._blackKing = _blackKing;
-    }
+      finally {
+        this._board[targetIx] = saved;
+        this._board[squareIx] = movingPiece;
+        this._whiteKing = _whiteKing;
+        this._blackKing = _blackKing;
+      }
 
-    for (const fixSan of fixSans) {
-      const matching = result.filter(m => m.san === fixSan);
-      for (const move of matching) {
-        move.san = buildSAN(move, matching);
+      if (isLegal) {
+        if (options.exists) {
+          result.push({} as any);
+          return;
+        }
+
+        if (move.piece === PAWN && (move.y === 0 || move.y === BOARD_HEIGHT - 1)) {
+          move.promotion = QUEEN;
+        }
+
+        if (!options.simple) {
+          const disambiguation = this.disambiguateFrom(targetIx, movingPiece.toLowerCase(), opponentColor);
+          move.san = buildSAN(move, disambiguation);
+        }
+
+        const { x, y, ...resultMove } = move;
+        result.push(resultMove as MoveData);
       }
     }
+  }
+
+  private disambiguateFrom(squareIx: number, piece: string, color: Color): string[] {
+    const results: string[] = [];
+    const lineAttacks = this.getMovesBySquare({ squareIx, simple: true, captures: true }, color, piece);
+    for (const move of lineAttacks) {
+      if (move.captured === piece) {
+        results.push(indexToSquare(offsetToIndex(move)));
+      }
+    }
+    return results;
   }
 
   private testForCheck(color: Color) {

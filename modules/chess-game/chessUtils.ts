@@ -79,19 +79,19 @@ export function deltaOffsets(a: Offset, b: Offset): Offset {
   };
 }
 
-export function buildSAN(move: Move, conflicts?: Move[]) {
+export function buildSAN(move: Move, conflicts?: string[]) {
 
   const result: string[] = move.piece !== PAWN ? [move.piece.toUpperCase()] : [];
   if (conflicts && conflicts.length > 1) {
     const counts: { [key: string]: any } = { ranks: {}, files: {} };
-    for (const mv of conflicts) {
-      counts.ranks[mv.from[1]] = (counts.ranks[mv.from[1]] || 0) + 1;
-      counts.files[mv.from[0]] = (counts.files[mv.from[0]] || 0) + 1;
+    for (const from of conflicts) {
+      counts.ranks[from[1]] = (counts.ranks[from[1]] || 0) + 1;
+      counts.files[from[0]] = (counts.files[from[0]] || 0) + 1;
     }
     if (Object.keys(counts.ranks).length === conflicts.length) {
       result.push(move.from[1]);
     }
-    else if (Object.keys(counts.ranks).length === conflicts.length) {
+    else if (Object.keys(counts.files).length === conflicts.length) {
       result.push(move.from[0]);
     }
     else {
