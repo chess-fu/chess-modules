@@ -118,7 +118,7 @@ describe('PgnDataCursor(Moves)', function () {
         return move;
       }
       catch (ex) {
-        console.log(`${test}: ${ex.message}`);
+        console.info(`${test}: ${ex.message}`);
         throw ex;
       }
     });
@@ -126,7 +126,7 @@ describe('PgnDataCursor(Moves)', function () {
     // The move number is excluded, thus...
     const fail = results.filter(m => m.test !== m.raw);
     if (fail.length) {
-      console.log(fail.map(m => m.test));
+      console.info(fail.map(m => m.test));
       assert.fail('One or more tests failed.');
     }
   });
@@ -151,7 +151,7 @@ describe('PgnDataCursor(Moves)', function () {
 
     const fail = results.filter(m => m.test !== m.raw);
     if (fail.length) {
-      console.log(fail.map(m => m.test));
+      console.info(fail.map(m => m.test));
       assert.fail('One or more tests failed.');
     }
   });

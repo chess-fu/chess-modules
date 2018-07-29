@@ -111,6 +111,7 @@ export class ChessGame {
   private _castles: string;
 
   private _cacheValid: boolean;
+  private _gameResult: GameResult;
   private _checked: boolean;
   private _noValidMoves: boolean;
 
@@ -123,8 +124,8 @@ export class ChessGame {
     }
   }
 
-  init(saveHeader?: boolean) {
-    if (!saveHeader) this._headers = {};
+  private init() {
+    this._headers = {};
     this._history = [];
     this._board = EMPTY_BOARD();
     this._turn = WHITE;
@@ -133,6 +134,8 @@ export class ChessGame {
     this._moveNumber = 1;
     this._whiteKing = this._blackKing = -1;
     this._castles = EMPTY_STRING;
+    this._cacheValid = false;
+    this._gameResult = ONGOING;
   }
 
   load(fen?: string) {
@@ -142,7 +145,8 @@ export class ChessGame {
     this.restoreFen(fen);
 
     if (fen !== START_FEN) {
-      this._headers = { ...this._headers, SetUp: '1', FEN: fen };
+      this._headers.SetUp = '1';
+      this._headers.FEN = fen;
     }
   }
 
@@ -222,7 +226,7 @@ export class ChessGame {
         this._headers[tagPairs[i]] = tagPairs[i + 1];
       }
     }
-    return this._headers;
+    return { ...this._headers, Result: this._gameResult };
   }
 
   history(options?: any): Move[] {
@@ -281,34 +285,28 @@ export class ChessGame {
     this.updated();
   }
 
-  private updated(saveResult?: boolean) {
-    if (!saveResult) {
-      delete this._headers.Result;
-    }
+  private updated() {
+    this._gameResult = ONGOING;
     this._cacheValid = false;
   }
 
   private updateCachedState() {
-    if (this._cacheValid) return;
+    if (this._cacheValid !== true) {
+      this._cacheValid = true;
+      this._checked = this.testForCheck(this._turn);
+      this._noValidMoves = !this.hasValidMoves(this._turn);
 
-    this._cacheValid = true;
-    this._checked = this.testForCheck(this._turn);
-    this._noValidMoves = !this.hasValidMoves(this._turn);
-
-    if (!this.isOngoing()) {
-      return;
-    }
-
-    if (this.isAutomaticDraw()) {
-      this._headers.Result = DRAW; // Insufficient Material = Forced draw
-    }
-    else {
-      if (this._noValidMoves) {
-        if (this._checked) {
-          this._headers.Result = this._turn === WHITE ? BLACK_WINS : WHITE_WINS;
-        }
-        else {
-          this._headers.Result = DRAW; // Stalemate = Forced draw
+      if (this.isAutomaticDraw()) {
+        this._gameResult = DRAW; // Insufficient Material = Forced draw
+      }
+      else {
+        if (this._noValidMoves) {
+          if (this._checked) {
+            this._gameResult = this._turn === WHITE ? BLACK_WINS : WHITE_WINS;
+          }
+          else {
+            this._gameResult = DRAW; // Stalemate = Forced draw
+          }
         }
       }
     }
@@ -781,16 +779,10 @@ export class ChessGame {
   }
 
   getResult(): GameResult {
-    switch (this._headers.Result || ONGOING) {
-      case WHITE_WINS: return WHITE_WINS;
-      case BLACK_WINS: return BLACK_WINS;
-      case DRAW: return DRAW;
-      default: return ONGOING;
-    }
+    return this._gameResult;
   }
 
   private assertOngoing() {
-    this.updateCachedState();
     if (!this.isOngoing()) {
       throw new Error(`Invalid operation, game is over: ${this.getResult()}.`);
     }
@@ -867,6 +859,7 @@ export class ChessGame {
   setDraw() {
     this.assertOngoing();
     this._headers.Result = DRAW;
+    this._gameResult = DRAW;
   }
 
   isDraw() {

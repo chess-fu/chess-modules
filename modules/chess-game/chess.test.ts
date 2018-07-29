@@ -207,11 +207,30 @@ describe('chess', function () {
     assert.equal(castles[0].san, 'O-O-O');
   });
 
-  it.only('disambiguation between moves', function () {
+  it('disambiguation between moves', function () {
     const game = new Chess('1k1r3r/ppp1Qppp/n4n2/5q2/2P1p3/5N2/PP3PPP/RNB2RK1 b - - 2 12');
     const moves = game.moves().filter(m => m.piece === 'r' && m.to === 'e8');
     const sanMoves = moves.map(m => m.san).sort().join(',');
     assert.equal(sanMoves, 'Rde8,Rhe8');
+  });
+
+  it.only('stops game on mate', function () {
+    const game = new Chess('1k1r3r/ppp1Qppp/n4n2/5q2/2P1p3/5N2/PP3PPP/RNB2RK1 b - - 2 12');
+
+    game.move('Rhe8');
+    game.move('Qxe8');
+    game.move('Qg6');
+    assert.isTrue(game.isOngoing());
+    game.move('Qxd8#');
+    assert.isFalse(game.isOngoing());
+    assert.isTrue(game.isCheckmate());
+    assert.equal(game.header().Result, '1-0');
+
+    // loaded fen but in checkmate
+    game.load(game.fen());
+    assert.isFalse(game.isOngoing());
+    assert.isTrue(game.isCheckmate());
+    assert.equal(game.header().Result, '1-0');
   });
 
 });
