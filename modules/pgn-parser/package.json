@@ -1,7 +1,7 @@
 {
   "name": "@chess-fu/pgn-parser",
   "access": "public",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Chess PGN parser for 8x8 chess games for import or export standards",
   "author": "chess-fu.com",
   "license": "MIT",
@@ -39,7 +39,8 @@
     "clean": "../../node_modules/.bin/rimraf ./dist",
     "build": "../../node_modules/.bin/tsc",
     "test": "cd ../../ && ./node_modules/.bin/mocha ./modules/pgn-parser/src/*.test.ts",
-    "prepack": "npm run clean && npm run build",
+    "prepack": "npm run test && npm run clean && npm run build",
+    "prepublish": "npm version patch",
     "release": "npm publish -tag latest --access public"
   }
 }
