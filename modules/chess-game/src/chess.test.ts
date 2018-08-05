@@ -112,7 +112,7 @@ describe('chess', function () {
 
   it('perf testForCheck', function () {
     this.slow(16);
-    this.timeout(20);
+    this.timeout(30);
     const game = new Chess();
     game.load();
     //console.time('testForCheck');
@@ -125,7 +125,7 @@ describe('chess', function () {
 
   it('perf hasValidMoves', function () {
     this.slow(48);
-    this.timeout(60);
+    this.timeout(100);
     const game = new Chess();
     game.load();
     //console.time('hasValidMoves');
@@ -214,7 +214,17 @@ describe('chess', function () {
     assert.equal(sanMoves, 'Rde8,Rhe8');
   });
 
-  it.only('stops game on mate', function () {
+  it('Will load game with non-standard SAN disambiguation notation', function () {
+    const chess = new Chess();
+    chess.loadPgn(`
+      1.d4 Nf6 2.c4 e6 3.Nf3 b6 4.a3 Ba6 5.Qc2 c5 6.d5 exd5 7.cxd5 g6 8.Nc3 Bg7
+      9.g3 O-O 10.Bg2 d6 11.O-O Re8 12.Re1 b5 13.e4 Nbd7 14.Bf4 Qb6 15.Bh3 Rad8
+      16.Ra1d1 Bc8 17.Bf1 a6 18.h3 Bb7 19.Nd2 c4 20.Bxc4 bxc4 21.Nd2xc4 Qa7 22.Nxd6 Rf8
+      23.g4 Ne8 24.Nxb7 Qxb7 25.e5 Nc7 26.Bh2 Rfe8 27.f4  1/2-1/2
+    `);
+  });
+
+  it('stops game on mate', function () {
     const game = new Chess('1k1r3r/ppp1Qppp/n4n2/5q2/2P1p3/5N2/PP3PPP/RNB2RK1 b - - 2 12');
 
     game.move('Rhe8');

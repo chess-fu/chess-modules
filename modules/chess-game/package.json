@@ -35,10 +35,10 @@
     "dist/types/index.d.ts"
   ],
   "scripts": {
-    "prebuild": "../../node_modules/.bin/rimraf ./dist",
+    "clean": "../../node_modules/.bin/rimraf ./dist",
     "build": "../../node_modules/.bin/tsc",
-    "test": "cd ../../ && ./node_modules/.bin/mocha ./modules/chess-game/*.test.ts",
-    "prepack": "npm run build",
+    "test": "cd ../../ && ./node_modules/.bin/mocha ./modules/chess-game/src/*.test.ts",
+    "prepack": "npm run clean && npm run build",
     "release": "npm publish -tag latest --access public"
   },
   "dependencies": {

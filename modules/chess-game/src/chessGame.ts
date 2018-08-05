@@ -35,7 +35,9 @@ import {
   NONE, PAWN, ROOK, KNIGHT, BISHOP, QUEEN, KING, WKING, BKING,
   BOARD_WIDTH, BOARD_HEIGHT, BOARD_SIZE,
   SLASH, PLUS, HASH, START_FEN,
-  WHITE_WINS, BLACK_WINS, DRAW, ONGOING, CASTLE_KING_OFFSETX, CASTLE_QUEEN_OFFSETX,
+  WHITE_WINS, BLACK_WINS, DRAW, ONGOING,
+  CASTLE_KING_OFFSETX, CASTLE_QUEEN_OFFSETX,
+  STANDARD_PGN_HEADERS
 } from './constants';
 
 import {
@@ -71,6 +73,7 @@ const PATTERN_PROMOTE_TYPE = /=([QRNB])/;
 const PATTERN_ANNOTATION = /(([\!\?]+)|$\d{1,3})+$/;
 const PATTERN_LOWER_CASE = /[a-z]/g;
 const PATTERN_UPPER_CASE = /[A-Z]/g;
+const PATTERN_PGN_QUOTED = /"|\\\\/g;
 
 const PIECE_TYPES = 'kqbnrp'.split(EMPTY_STRING);
 const PROMOTIONS = 'qrnb'.split(EMPTY_STRING);
@@ -209,7 +212,56 @@ export class ChessGame {
       ` ${this._turn} ${this._castles || NONE} ${indexToSquare(this._enpass)} ${this._halfmoveClock} ${this._moveNumber}`;
   }
 
-  pgn(options?: { newline_char: string, max_width: number }) { return EMPTY_STRING; /* TODO */ }
+  pgn(options?: { newline_char: string, max_width: number }) {
+    const newline = (options || {} as any).newline_char || '\n';
+    const width = (options || {} as any).max_width || 80;
+    if (!this._headers.Result) {
+      this._headers.Result = this._gameResult;
+    }
+    const pgn: string[] = [];
+    const headers = { ...this._headers };
+    pgn.push(...this.pgnHeaders(STANDARD_PGN_HEADERS, headers));
+    pgn.push(...this.pgnHeaders(Object.keys(headers), headers));
+    pgn.push();
+    const { turn, moveNumber } = new FenParser(this._headers.FEN || START_FEN);
+    const history = this._history;
+    let moveCounter = Math.max(1, moveNumber);
+    let line = '';
+    for (let ix = 0; ix < history.length; ix++) {
+
+      const moveNum = `${(moveCounter++)}.`;
+      let white = history[ix].san;
+      if (ix === 0 && turn === 'b') {
+        white = '...';
+      } else {
+        ix++;
+      }
+      const black = ix < history.length ? history[ix].san : null;
+      const reqLen = 1 + moveNum.length + 1 + white.length + 1 + (black ? (black.length + 1) : 0);
+
+      if (line.length && (line.length + reqLen) >= width) {
+        pgn.push(line);
+        line = '';
+      }
+
+      line += `${line.length ? ' ' : ''}${moveNum} ${white}${black ? ` ${black}` : ''}`;
+    }
+    if (line.length) {
+      pgn.push(line);
+    }
+    pgn.push(this._headers.Result);
+    return pgn.join(newline);
+  }
+
+  pgnHeaders(keys: string[], headers: any): string[] {
+    return keys
+      .filter(key => headers.hasOwnProperty(key) && headers[key] !== null && headers[key] !== undefined)
+      .map(key => {
+        const value = `${headers[key]}`.replace(PATTERN_PGN_QUOTED, m => '\\' + m[0]);
+        headers[key] = undefined;
+        return `[${key} "${value}"]`;
+      });
+  }
 
   squares(): string[] {
     return Object.keys(INDEXES);
@@ -337,21 +389,26 @@ export class ChessGame {
     }
   }
 
+
   private moveToSAN(san: string) {
     const movesValid = this.moves({ color: this._turn });
-    // TODO: Need to integrate a full SAN parser here:
-    const findSan = san.trim()
-      .replace(PATTERN_PROMOTE_RNB, '=Q') //we only produce queen promotions (e8=Q)
-      .replace(PATTERN_ANNOTATION, EMPTY_STRING) //remove any trailing annotations
-      ;
-    const found = movesValid.filter(m => findSan === m.san && m.color === this._turn);
+    const sanMove = new PgnParser().parseMove(san) || {};
+    const found = movesValid
+      .filter(m => (
+        sanMove.san === m.san || (
+          sanMove.to === m.to &&
+          (sanMove.piece || '').toLowerCase() === m.piece.toLowerCase() &&
+          (!sanMove.from || m.from.indexOf(sanMove.from.toLowerCase()) >= 0) &&
+          m.color === this._turn
+        )
+      ));
     if (found.length !== 1) {
+      console.warn(`Can not find move ${san} in ${movesValid.map(m => m.san).join(',')}`);
       throw new Error(`The SAN ${san} is not valid.`);
     }
     const [move] = found;
-    if (move.promotion) {
-      const match = san.match(PATTERN_PROMOTE_TYPE);
-      if (match) move.promotion = match[1];
+    if (move.promotion && sanMove.promotion) {
+      move.promotion = sanMove.promotion.toLowerCase();
     }
     return this.performMove(move, false);
   }
@@ -748,8 +805,14 @@ export class ChessGame {
         }
 
         if (!options.simple) {
-          const disambiguation = this.disambiguateFrom(targetIx, movingPiece.toLowerCase(), opponentColor);
-          move.san = buildSAN(move, disambiguation);
+          const pieceType = movingPiece.toLowerCase();
+          if (pieceType === KING || (pieceType === PAWN && !move.captured)) {
+            move.san = buildSAN(move, EMPTY_ARRAY);
+          }
+          else {
+            const disambiguation = this.disambiguateFrom(targetIx, pieceType, opponentColor);
+            move.san = buildSAN(move, disambiguation);
+          }
         }
 
         const { x, y, ...resultMove } = move;

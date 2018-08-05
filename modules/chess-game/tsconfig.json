@@ -1,12 +1,13 @@
 {
-	"extends": "../../tsconfig.base.json",
-	"compilerOptions": {
-		"sourceRoot": ".",
-		"outDir": "dist/src/",
-		"declarationDir": "./dist/types/",
-		"noUnusedLocals": false,
-	},
-	"exclude": [
-		"*.test.ts"
-	]
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "sourceRoot": "src/",
+    "outDir": "dist/src/",
+    "declarationDir": "./dist/types/",
+    "noUnusedLocals": false,
+  },
+  "exclude": [
+    "dist",
+    "*.test.ts"
+  ]
 }

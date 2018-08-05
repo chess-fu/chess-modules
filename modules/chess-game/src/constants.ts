@@ -58,3 +58,5 @@ export const WHITE_WINS = '1-0';
 export const BLACK_WINS = '1-0';
 export const DRAW = '1/2-1/2';
 export const ONGOING = '*';
+
+export const STANDARD_PGN_HEADERS = ['SetUp', 'FEN', 'Event', 'Site', 'Date', 'Time', 'UTCDate', 'UTCTime', 'Round', 'White', 'Black', 'Result'];
