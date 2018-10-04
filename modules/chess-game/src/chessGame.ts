@@ -769,14 +769,24 @@ export class ChessGame {
 
     for (const move of possible) {
       let isLegal = false;
-      this._board[squareIx] = NONE;
       const targetIx = offsetToIndex(move);
-      const saved = this._board[targetIx];
-      let saveEnpass = null as any;
+      const restore = [targetIx, this._board[targetIx], squareIx, this._board[squareIx]];
+
+      this._board[squareIx] = NONE;
       if (this._enpass >= 0 && move.enpass) {
         const killSquare = offsetToIndex({ y: move.y === 2 ? move.y + 1 : move.y - 1, x: move.x });
-        saveEnpass = this._board[killSquare];
+        restore.push(killSquare, this._board[killSquare]);
         this._board[killSquare] = NONE;
+      }
+      else if (move.castle && move.castle in INDEXES) {
+        const castleIx = INDEXES[move.castle];
+        const rookPiece = (this._turn === WHITE ? ROOK.toUpperCase() : ROOK);
+        const queenSide = move.castle < move.from;
+        const rookToIx = targetIx + (queenSide ? 1 : -1);
+        restore.push(castleIx, this._board[castleIx]);
+        restore.push(rookToIx, this._board[rookToIx]);
+        this._board[castleIx] = NONE;
+        this._board[rookToIx] = rookPiece;
       }
       try {
         this._board[targetIx] = movingPiece;
@@ -794,14 +804,11 @@ export class ChessGame {
         }
       }
       finally {
-        this._board[targetIx] = saved;
-        this._board[squareIx] = movingPiece;
+        for (let ix = 0; ix < restore.length; ix += 2) {
+          this._board[restore[ix]] = restore[ix + 1];
+        }
         this._whiteKing = _whiteKing;
         this._blackKing = _blackKing;
-        if (this._enpass >= 0 && move.enpass) {
-          const killSquare = offsetToIndex({ y: move.y === 2 ? move.y + 1 : move.y - 1, x: move.x });
-          this._board[killSquare] = saveEnpass;
-        }
       }
 
       if (isLegal) {
