@@ -772,6 +772,12 @@ export class ChessGame {
       this._board[squareIx] = NONE;
       const targetIx = offsetToIndex(move);
       const saved = this._board[targetIx];
+      let saveEnpass = null as any;
+      if (this._enpass >= 0 && move.enpass) {
+        const killSquare = offsetToIndex({ y: move.y === 2 ? move.y + 1 : move.y - 1, x: move.x });
+        saveEnpass = this._board[killSquare];
+        this._board[killSquare] = NONE;
+      }
       try {
         this._board[targetIx] = movingPiece;
         if (movingPiece === WKING) { this._whiteKing = targetIx; }
@@ -792,6 +798,10 @@ export class ChessGame {
         this._board[squareIx] = movingPiece;
         this._whiteKing = _whiteKing;
         this._blackKing = _blackKing;
+        if (this._enpass >= 0 && move.enpass) {
+          const killSquare = offsetToIndex({ y: move.y === 2 ? move.y + 1 : move.y - 1, x: move.x });
+          this._board[killSquare] = saveEnpass;
+        }
       }
 
       if (isLegal) {

@@ -94,6 +94,71 @@ describe('chess', function () {
     assert.equal(mates[0].san, 'Qa8#');
   });
 
+  it('will play a game with heavy notation', function () {
+    const pgn = `
+[Event "Rated Rapid game"]
+[Date "2018.07.31"]
+[Round "-"]
+[White "masked02"]
+[Black "masked01"]
+[Result "1-0"]
+[UTCDate "2018.07.31"]
+[UTCTime "22:31:24"]
+[WhiteElo "1116"]
+[BlackElo "1235"]
+[WhiteRatingDiff "+23"]
+[BlackRatingDiff "-14"]
+[Variant "Standard"]
+[TimeControl "600+0"]
+[ECO "C44"]
+[Opening "Ponziani Opening: Jaenisch Counterattack"]
+[Termination "Normal"]
+[Annotator "lichess.org"]
+
+1. e4 e5 2. Nf3 Nc6 3. c3 Nf6 { C44 Ponziani Opening: Jaenisch Counterattack } 4. d4 d6?! { (0.00 → 0.88) Inaccuracy. Best move was Nxe4. } 
+(4... Nxe4 5. Bd3 d5 6. Nxe5 Nxe5 7. dxe5 Bc5 8. O-O O-O 9. Nd2) 5. d5 Nxe4? { (0.43 → 1.44) Mistake. Best move was Ne7. } 
+(5... Ne7 6. Bd3 Ng6 7. O-O Be7 8. c4 O-O 9. Nc3 Nh5 10. Re1) 6. dxc6 bxc6 7. Qe2?! { (2.09 → 1.28) Inaccuracy. Best move was Qc2. } 
+(7. Qc2 Nf6 8. c4 e4 9. Nd4 Bd7 10. Be2 d5 11. c5 Qe7 12. Nb3 a5 13. a4 d4) 7... Bf5? { (1.28 → 2.37) Mistake. Best move was f5. } 
+(7... f5 8. Nbd2 Nf6 9. Nc4 Be7 10. Na5 Bd7 11. Qa6 Qc8 12. Bg5 Qxa6 13. Bxa6 Rb8 14. Bxf6) 8. Nbd2? { (2.37 → 1.36) Mistake. Best move was g4. } 
+(8. g4 Bg6 9. Nxe5 dxe5 10. Bg2 Be7 11. Bxe4 Bxe4 12. Qxe4 Qd5 13. Qxd5 cxd5 14. Ke2 f6) 8... Nc5 
+9. Nh4?? { (1.59 → -4.86) Blunder. Best move was Nd4. } (9. Nd4 Bg6) 9... Qxh4? { (-4.86 → -2.41) Mistake. Best move was Nd3+. } 
+(9... Nd3+ 10. Kd1 Qxh4 11. g3 Qa4+ 12. b3 Qa5 13. b4 Qa4+ 14. Nb3 a5 15. Qe3 Nxc1 16. Rxc1) 
+10. g3?! { (-2.41 → -2.92) Inaccuracy. Best move was Qf3. } (10. Qf3 Bd7 11. Nc4 Ne6 12. g3 Qe7 13. Qe2 e4 14. Be3 g6 
+15. Bh3 Bg7 16. O-O O-O) 10... Qg5? { (-2.92 → -0.63) Mistake. Best move was Qf6. } (10... Qf6 11. Qf3 d5 12. g4 Bg6 
+13. Qxf6 gxf6 14. Nb3 Ne6 15. h3 h5 16. Bg2 Kd7 17. Ke2) 11. Ne4 Nxe4?? { (-0.77 → 3.21) Blunder. Best move was Qe7. } 
+(11... Qe7 12. Nxc5 dxc5 13. Bg2 Qe6 14. Qa6 e4 15. Qb7 Rd8 16. O-O Be7 17. Re1 O-O 18. Qxa7) 
+12. Bxg5 d5?? { (3.15 → 6.75) Blunder. Best move was Nxg5. } (12... Nxg5 13. f4 Ne6 14. Bg2 Nd8 
+15. fxe5 d5 16. h4 Be7 17. O-O Be6 18. Kh2 O-O 19. Rad1) 13. g4?! { (6.75 → 6.00) Inaccuracy. Best move was f3. } 
+(13. f3 Nxg5 14. Qxe5+ Be6 15. Qxg5 Kd7 16. Qe5 f6 17. Qh5 g6 18. Qh4 f5 19. O-O-O a5) 13... Be6 
+14. f3? { (6.12 → 4.74) Mistake. Best move was Be3. } (14. Be3 Be7 15. f3 Nd6 16. Bc5 f6 17. O-O-O a5 
+18. f4 e4 19. f5 Bf7 20. Qf2 Nb7) 14... Nxg5 15. h4 Nxf3+ 16. Qxf3 Rd8?! { (4.56 → 5.51) Inaccuracy. Best move was e4. } 
+(16... e4) 17. h5?! { (5.51 → 4.87) Inaccuracy. Best move was g5. } (17. g5 Bc5 18. Bh3 e4 19. Qg3 Bxh3 
+20. Rxh3 Bd6 21. Qe3 O-O 22. Qxa7 Rb8 23. b3 Rb6) 17... h6 18. Bd3? { (4.92 → 2.13) Mistake. Best move was Bh3. } 
+(18. Bh3 Be7 19. g5 Bxg5 20. Bxe6 fxe6 21. Qg3 Bf6 22. O-O-O Kd7 23. Rhe1 a5 24. Qg6 Rhf8) 
+18... Rd6?? { (2.13 → 5.90) Blunder. Best move was e4. } (18... e4 19. Bxe4 dxe4 20. Qxe4 Rd5 21. c4 Rc5 22. b3 Bd6 
+23. O-O-O O-O 24. Rhg1 Bd7 25. Qg2) 19. Bf5 d4? { (5.57 → 7.52) Mistake. Best move was Be7. } 
+(19... Be7 20. Qf2 d4 21. Bxe6 Rxe6 22. O-O-O c5 23. Qg2 c6 24. Qe4 Bg5+ 25. Kc2 O-O 26. c4) 
+20. cxd4?! { (7.52 → 6.63) Inaccuracy. Best move was Bxe6. } (20. Bxe6 Rxe6 21. O-O f6 
+22. Qf5 Kf7 23. cxd4 e4 24. Rae1 e3 25. Qd3 Bd6 26. Rxe3 Rxe3) 20... Rxd4?? { (6.63 → 10.96) Blunder. Best move was Bd5. } 
+(20... Bd5 21. Be4 Rf6 22. Qe2 Bb4+ 23. Kd1 O-O 24. Bxd5 cxd5 25. Qxe5 Ba5 26. g5 Re6 27. Qxd5) 21. Qxc6+ Kd8 
+22. Qa8+ Kd7 23. Qxa7? { (9.83 → 7.20) Mistake. Best move was Bxe6+. } (23. Bxe6+) 23... Bb4+ 24. Ke2 Rd2+ 
+25. Kf3 Bxf5? { (7.23 → 8.23) Mistake. Best move was Bd6. } (25... Bd6 26. Rad1 Rxd1 27. Rxd1 Rd8 28. Ke4 Ke7 
+29. Rc1 Ke8 30. Rc6 Kd7 31. Qb7 Ke8 32. Bxe6) 26. gxf5 Rd3+? { (8.03 → 12.01) Mistake. Best move was Bd6. } 
+(26... Bd6 27. Rhd1 Rxd1 28. Rxd1 Ke7 29. Rg1 Rg8 30. Ke4 Rh8 31. Rxg7 Kf6 32. Rg1 Ke7 33. a4) 27. Ke4 Rd4+ 
+28. Kxe5 Rd6 29. Qa4+ c6 30. Qxb4 Re8+ 31. Kf4 g5+ 32. fxg6 Rf6+ 33. Kg3 Re3+ 34. Kg2 Re2+ 
+35. Kg1 Rff2?! { (14.34 → Mate in 11) Checkmate is now unavoidable. Best move was fxg6. } 
+(35... fxg6) 36. Qd4+?! { (Mate in 11 → 18.28) Lost forced checkmate sequence. Best move was Rd1+. } 
+(36. Rd1+ Kc8 37. Qf8+ Kc7 38. Qd8+ Kb7 39. Rd7+ Ka6 40. Qa8+ Kb6 41. Qb8+ Kc5 42. Qd6+ Kb6) 
+36... Kc7?! { (18.28 → Mate in 10) Checkmate is now unavoidable. Best move was Ke7. } 
+(36... Ke7 37. Qc5+) 37. Qxf2 Rxf2 38. Kxf2 Kd6 39. Rad1+ Kc5 40. Rh4?! { (Mate in 5 → Mate in 6) 
+Not the best checkmate sequence. Best move was gxf7. } (40. gxf7 Kb6 41. f8=Q Kc7 42. Rh3 c5 43. Rb3 c4 
+44. Qc5#) 40... fxg6 41. hxg6 { Black resigns. } 1-0`;
+
+    const game = new Chess();
+    game.load();
+    game.loadPgn(pgn);
+  });
+
   it('will play SAN moves for each piece', function () {
     const game = new Chess();
     game.load();
@@ -222,6 +287,11 @@ describe('chess', function () {
       16.Ra1d1 Bc8 17.Bf1 a6 18.h3 Bb7 19.Nd2 c4 20.Bxc4 bxc4 21.Nd2xc4 Qa7 22.Nxd6 Rf8
       23.g4 Ne8 24.Nxb7 Qxb7 25.e5 Nc7 26.Bh2 Rfe8 27.f4  1/2-1/2
     `);
+  });
+
+  it('allows enpass to avoid check', function () {
+    const game = new Chess('4r3/3k1p2/2pr3p/5PpP/1Q3K2/8/PP6/R6R w - g6 0 32');
+    assert.equal(game.move('fxg6').san, 'fxg6');
   });
 
   it('stops game on mate', function () {
